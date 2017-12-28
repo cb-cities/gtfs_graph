@@ -208,7 +208,6 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 								"arrival_time" : arr_gen_stamp.strftime('%s')
 							}
 
-						data.extend(route_data)
 						time_tabled_services.append(data)
 			
 			except Exception as e:
@@ -223,8 +222,10 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 				"positiveNode" : pos_node,
 				"trip_id" : trip_id_1,
 				"stop_sequence" : stop_sequence,
-				"time_tabled_services" : time_tabled_services
+				"time_tabled_services" : time_tabled_services,
+				"service_information" : route_data
 			}
+
 			current_trip.append(data)
 
 		else:
@@ -376,3 +377,4 @@ print "Node data generation complete"
 toc = time.time()
 
 print "Overall time:", str(toc - tic)
+
