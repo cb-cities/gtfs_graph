@@ -67,14 +67,68 @@ def timetable_day_over_run_ftn(day, stamp):
 	
 	return new_time
 
+def route_type_dict(route_type):
+	type_dict = {
+		0 : {
+			"route_type" : 0,
+			"route_type_desc" : "Tram, Streetcar, Light rail"
+			},
+		1 : {
+			"route_type" : 1,
+			"route_type_desc" : "Subway, Metro"
+			},
+		2 : {
+			"route_type" : 2,
+			"route_type_desc" : "Rail"
+			},
+		3 : {
+			"route_type" : 3,
+			"route_type_desc" : "Bus"
+			},
+		4 : {
+			"route_type" : 4,
+			"route_type_desc" : "Ferry"
+			},
+		5 : {
+			"route_type" : 5,
+			"route_type_desc" : "Cable car"
+			},
+		6 : {
+			"route_type" : 6,
+			"route_type_desc" : "Gondola, Suspended cable car"
+			},
+		7 : {
+			"route_type" : 7,
+			"route_type_desc" : "Funicular"
+			}
+		}
+
+	queried_type = type_dict[route_type]['route_type_desc']
+
+	return queried_type
+
 def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times):
 
 	error_log = []
 	all_unique_trips = []
 	current_trip = []
 	previous_step_sequence = 1
+	number = 0
+
 	for i in range(0,len(stop_times)-1):
 		current_stop = stop_times[i]
+		trip_id_ = current_stop['trip_id']
+		route_id = trips_db[trip_id_]['route_id']
+		route_type = routes_db[str(route_id)]
+		
+		route_data = {
+			"agency" : route_type['agency_id'],
+			"route_short_name" : route_type['route_short_name'],
+			"route_id" : route_type['route_id'],
+			"route_long_name" : route_type['route_long_name'],
+			"route_type" : route_type_dict(route_type['route_type'])
+		}
+
 		next_stop = stop_times[i+1]
 		if next_stop['stop_sequence'] > previous_step_sequence:
 
@@ -154,21 +208,22 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 								"arrival_time" : arr_gen_stamp.strftime('%s')
 							}
 
+						data.extend(route_data)
 						time_tabled_services.append(data)
 			
 			except Exception as e:
 				data = {
-				"exception" : str(e),
-				"data" : service_id
+					"exception" : str(e),
+					"data" : service_id
 				}
 				error_log.append(data)
 			
 			data = {
-			'negativeNode' : neg_node,
-			"positiveNode" : pos_node,
-			"trip_id" : trip_id_1,
-			"stop_sequence" : stop_sequence,
-			"time_tabled_services" : time_tabled_services
+				'negativeNode' : neg_node,
+				"positiveNode" : pos_node,
+				"trip_id" : trip_id_1,
+				"stop_sequence" : stop_sequence,
+				"time_tabled_services" : time_tabled_services
 			}
 			current_trip.append(data)
 
@@ -189,17 +244,28 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			stop_data = all_unique_trip[i]
 			next_stop_data = all_unique_trip[i+1]
 
-			for z in range(len(stop_data['time_tabled_services'])):
+			for z in range(0,len(stop_data['time_tabled_services'])):
 				dep_time = int(stop_data['time_tabled_services'][z]['departure_time'])
-				arr_time = int(next_stop_data['time_tabled_services'][z]['arrival_time'])
+		
+				try:
+					arr_time = int(next_stop_data['time_tabled_services'][z]['arrival_time'])
+				except Exception as e:
+					number = number + 1
+					data = {
+						"record" : next_stop_data ,
+						"error" : str(e)
+					}
+
+					error_log.append(data)
 				
 				data = {
-				"departure_time" : dep_time,
-				"arrival_time" : arr_time,
-				"journey_time" : (arr_time - dep_time)
+					"departure_time" : dep_time,
+					"arrival_time" : arr_time,
+					"journey_time" : (arr_time - dep_time)
 				}
 				
 				link_data.append(data)
+			
 			
 			all_unique_trip[i].pop("time_tabled_services")
 			all_unique_trip[i]['services'] = link_data
@@ -220,7 +286,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 		
 		all_unique_trip[-1]['services'] = final_records
 
-	print len(error_log), " errors found"
+	print str(number), " z related errors on future times"
 
 	print "Dumping results to file"
 
@@ -229,9 +295,16 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 		with gzip.open('../out/gtfs_edge_data_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
 			json.dump(all_unique_trips[i:i+chunkSize], outfile, indent =2)
 
+	print len(all_unique_trips), " trips generated"
+
+	unique_error_log = [i for n, i in enumerate(error_log) if i not in error_log[n + 1:]]
+
+	print len(unique_error_log), " unique errors found"
+
 	print "Dumping error log"
+
 	with gzip.open("../out/error_log.json.gz",'w') as outfile:
-		json.dump(error_log,outfile,indent=2)
+		json.dump(unique_error_log,outfile,indent=2)
 
 def create_nodes(stops_db):
 	nodes_data = []
@@ -270,6 +343,8 @@ def create_nodes(stops_db):
 	with gzip.open("../out/gtfs_node_data.json.gz",'w') as outfile:
 		json.dump(nodes_data,outfile,indent=2)
 
+	print len(nodes_data), " nodes generated"
+
 	print "Dumping address data"
 	with gzip.open("../out/gtfs_address_data.json.gz",'w') as outfile:
 		json.dump(address_data,outfile,indent=2)
@@ -287,11 +362,17 @@ else:
 
 	print "GTFS already extracted...."
 
+tic = time.time()
 print "Extracting GTFS data into usable format"
 trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times = get_what_ya_need(path)
 
-# print "Starting to generate edge data"
-# create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times)
+print "Starting to generate edge data...."
+create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times)
+print "Edge data generation complete"
 
-print "Starting to generate node data"
+print "Starting to generate node data...."
 create_nodes(stops_db)
+print "Node data generation complete"
+toc = time.time()
+
+print "Overall time:", str(toc - tic)
