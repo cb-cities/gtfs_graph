@@ -377,4 +377,3 @@ print "Node data generation complete"
 toc = time.time()
 
 print "Overall time:", str(toc - tic)
-
