@@ -107,7 +107,7 @@ def route_type_dict(route_type):
 
 	return queried_type
 
-def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times):
+def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times, section_slice_int):
 
 	error_log = []
 	all_unique_trips = []
@@ -293,7 +293,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 
 	chunkSize = 10000
 	for i in xrange(0, len(all_unique_trips), chunkSize):
-		with gzip.open('../out/gtfs_edge_data_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
+		with gzip.open('../out/gtfs_edge_data_' + section_slice_int + "_" + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
 			json.dump(all_unique_trips[i:i+chunkSize], outfile, indent =2)
 
 	print len(all_unique_trips), " trips generated"
@@ -302,9 +302,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 
 	print len(unique_error_log), " unique errors found"
 
-	print "Dumping error log"
-
-	with gzip.open("../out/error_log.json.gz",'w') as outfile:
+	with gzip.open("../out/error_log_" + section_slice_int + ".json.gz",'w') as outfile:
 		json.dump(unique_error_log,outfile,indent=2)
 
 def create_nodes(stops_db):
@@ -364,12 +362,25 @@ else:
 	print "GTFS already extracted...."
 
 tic = time.time()
-print "Extracting GTFS data into usable format"
+print "Converting GTFS data into usable format"
 trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times = get_what_ya_need(path)
 
-print "Starting to generate edge data...."
-create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times)
-print "Edge data generation complete"
+print len(stop_times)
+
+chunkSize = 10000
+print "Number of chunks: " + str(len(stop_times) / chunkSize)
+
+for i in xrange(0, len(stop_times), chunkSize):
+	print "######   " + str(i) + "   ######"
+	
+	tic = time.time()
+	section_slice_int = str(i)
+	section = stop_times[i:i+chunkSize]
+	print "Starting to generate edge data.... for slice " + section_slice_int + " off " + str(chunkSize)
+	create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, section, section_slice_int)
+	toc = time.time()
+	print str(toc - tic) + " seconds "
+	print "Edge data generation complete for slice", section_slice_int
 
 print "Starting to generate node data...."
 create_nodes(stops_db)
