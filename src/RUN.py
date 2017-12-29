@@ -52,7 +52,8 @@ def get_what_ya_need(path):
 		elif file_name == "stop_times":
 			print "Creating stop_times db"
 			stop_times_df = pd.read_csv(file)
-			stop_times = json.loads(stop_times_df.to_json(orient='records'))
+			# stop_times = json.loads(stop_times_df.to_json(orient='records'))
+			stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:100]
 			stop_times_db = {}
 			for stop in stop_times:
 				stop_times_db[stop['trip_id']] = stop
@@ -157,6 +158,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			
 			# Get calendar info from service_id
 			try:
+
 				date_info = datetime.strptime(str(calendar_db[service_id]['start_date']),'%Y%m%d')
 
 				# Let's find first Monday from the timetable
