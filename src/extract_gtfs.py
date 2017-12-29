@@ -2,7 +2,6 @@ import glob
 import json
 import gzip
 import tarfile
-from igraph import *
 from pprint import pprint
 import pandas as pd
 import sys
