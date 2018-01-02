@@ -52,6 +52,7 @@ def get_what_ya_need(path):
 		elif file_name == "stop_times":
 			print "Creating stop_times db"
 			stop_times_df = pd.read_csv(file)
+			# stop_times = json.loads(stop_times_df.to_json(orient='records'))
 			stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:100]
 			stop_times_db = {}
 			for stop in stop_times:
@@ -114,6 +115,8 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 	current_trip = []
 	previous_step_sequence = 1
 	number = 0
+
+	tic = time.time()
 
 	print len(stop_times), " stop_times loaded"
 
@@ -233,6 +236,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 
 		else:
 			print "One trip extracted"
+
 			# Append all the results to big list
 			all_unique_trips.append(current_trip)
 			
@@ -271,7 +275,6 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 				
 				link_data.append(data)
 			
-			
 			all_unique_trip[i].pop("time_tabled_services")
 			all_unique_trip[i]['services'] = link_data
 
@@ -301,6 +304,12 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			json.dump(all_unique_trips[i:i+chunkSize], outfile, indent =2)
 
 	print len(all_unique_trips), " trips generated"
+
+	toc = time.time()
+
+	time_per_unique_trip = (toc - tic) / len(all_unique_trips)
+
+	print "Time per unique trip", time_per_unique_trip
 
 	unique_error_log = [i for n, i in enumerate(error_log) if i not in error_log[n + 1:]]
 
