@@ -279,8 +279,8 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			all_unique_trip[i]['services'] = link_data
 
 		# Remove departure time from final record of each list (for reading clarity)
-		final_records = []
 		try:
+			final_records = []
 			for record in range(0,len(all_unique_trip[-1]['time_tabled_services'])):	
 				journey_time = int(all_unique_trip[-1]['time_tabled_services'][record]['arrival_time']) - int(all_unique_trip[-2]['services'][record]['departure_time'])
 
@@ -290,13 +290,16 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 				}
 
 				final_records.append(data)
-		except IndexError:
-			print "IndexError"
-			pprint(all_unique_trip)
 
-		all_unique_trip[-1].pop("time_tabled_services")
+			all_unique_trip[-1].pop("time_tabled_services")
+			
+			all_unique_trip[-1]['services'] = final_records
 		
-		all_unique_trip[-1]['services'] = final_records
+		except IndexError:
+			
+			print "IndexError"
+		
+			pprint(all_unique_trip)
 
 	print str(number), " z related errors on future times"
 
