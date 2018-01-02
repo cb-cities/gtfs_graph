@@ -52,8 +52,8 @@ def get_what_ya_need(path):
 		elif file_name == "stop_times":
 			print "Creating stop_times db"
 			stop_times_df = pd.read_csv(file)
-			stop_times = json.loads(stop_times_df.to_json(orient='records'))
-			# stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:100]
+			# stop_times = json.loads(stop_times_df.to_json(orient='records'))
+			stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:100]
 			stop_times_db = {}
 			for stop in stop_times:
 				stop_times_db[stop['trip_id']] = stop
@@ -247,59 +247,63 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			current_trip = []
 
 	collated_outputs = []
-	for all_unique_trip in all_unique_trips:
-		for i in range(0,len(all_unique_trip)-1):
-			link_data = []
-			stop_data = all_unique_trip[i]
-			next_stop_data = all_unique_trip[i+1]
 
-			for z in range(0,len(stop_data['time_tabled_services'])):
-				dep_time = int(stop_data['time_tabled_services'][z]['departure_time'])
-		
-				try:
-					arr_time = int(next_stop_data['time_tabled_services'][z]['arrival_time'])
-				except Exception as e:
-					number = number + 1
-					data = {
-						"record" : next_stop_data ,
-						"error" : str(e)
-					}
+	try:
+		for unique_trip in range(len(all_unique_trips)):
 
-					error_log.append(data)
-				
-				data = {
-					"departure_time" : dep_time,
-					"arrival_time" : arr_time,
-					"journey_time" : (arr_time - dep_time)
-				}
-				
-				link_data.append(data)
+			for i in range(0,len(all_unique_trips[unique_trip])-1):
+				link_data = []
+				stop_data = all_unique_trips[unique_trip][i]
+				next_stop_data = all_unique_trips[unique_trip][i+1]
+
+				for z in range(0,len(stop_data['time_tabled_services'])):
+					dep_time = int(stop_data['time_tabled_services'][z]['departure_time'])
 			
-			all_unique_trip[i].pop("time_tabled_services")
-			all_unique_trip[i]['services'] = link_data
+					try:
+						arr_time = int(next_stop_data['time_tabled_services'][z]['arrival_time'])
+					except Exception as e:
+						number = number + 1
+						data = {
+							"record" : next_stop_data ,
+							"error" : str(e)
+						}
 
-		# Remove departure time from final record of each list (for reading clarity)
-		try:
+						error_log.append(data)
+					
+					data = {
+						"departure_time" : dep_time,
+						"arrival_time" : arr_time,
+						"journey_time" : (arr_time - dep_time)
+					}
+					
+					link_data.append(data)
+				
+				all_unique_trips[unique_trip][i].pop("time_tabled_services")
+				all_unique_trips[unique_trip][i]['services'] = link_data
+
+			# Remove departure time from final record of each list (for reading clarity)
+
 			final_records = []
-			for record in range(0,len(all_unique_trip[-1]['time_tabled_services'])):	
-				journey_time = int(all_unique_trip[-1]['time_tabled_services'][record]['arrival_time']) - int(all_unique_trip[-2]['services'][record]['departure_time'])
+			for record in range(0,len(all_unique_trips[unique_trip][-1]['time_tabled_services'])):	
+				journey_time = int(all_unique_trips[unique_trip][-1]['time_tabled_services'][record]['arrival_time']) - int(all_unique_trips[unique_trip][-2]['services'][record]['departure_time'])
 
 				data = {
-				"arrival_time" : all_unique_trip[-1]['time_tabled_services'][record]['arrival_time'],
+				"arrival_time" : all_unique_trips[unique_trip][-1]['time_tabled_services'][record]['arrival_time'],
 				"journey_time" : journey_time
 				}
 
 				final_records.append(data)
 
-			all_unique_trip[-1].pop("time_tabled_services")
+			all_unique_trips[unique_trip][-1].pop("time_tabled_services")
 			
-			all_unique_trip[-1]['services'] = final_records
+			all_unique_trips[unique_trip][-1]['services'] = final_records
 		
-		except IndexError:
-			
-			print "IndexError"
+	except Exception as e:
+		pprint(e)
 		
-			pprint(all_unique_trip)
+		print "Removing data due to error"
+		
+		all_unique_trips.pop(unique_trip)
 
 	print str(number), " z related errors on future times"
 
