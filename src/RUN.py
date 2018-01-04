@@ -52,8 +52,8 @@ def get_what_ya_need(path):
 		elif file_name == "stop_times":
 			print "Creating stop_times db"
 			stop_times_df = pd.read_csv(file)
-			stop_times = json.loads(stop_times_df.to_json(orient='records'))
-			# stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:100]
+			# stop_times = json.loads(stop_times_df.to_json(orient='records'))
+			stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:100]
 			stop_times_db = {}
 			for stop in stop_times:
 				stop_times_db[stop['trip_id']] = stop
@@ -309,6 +309,8 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 
 	print "Dumping results to file"
 
+	pprint(all_unique_trips[0])
+
 	chunkSize = 10000
 	for i in xrange(0, len(all_unique_trips), chunkSize):
 		with gzip.open('../out/gtfs_edge_data_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
@@ -322,12 +324,10 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 
 	print "Time per unique trip", time_per_unique_trip
 
-	unique_error_log = [i for n, i in enumerate(error_log) if i not in error_log[n + 1:]]
-
-	print len(unique_error_log), " unique errors found"
+	print len(error_log), " errors found"
 
 	with gzip.open("../out/error_log_.json.gz",'w') as outfile:
-		json.dump(unique_error_log,outfile,indent=2)
+		json.dump(error_log,outfile,indent=2)
 
 def create_nodes(stops_db):
 	nodes_data = []
