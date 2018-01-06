@@ -256,12 +256,14 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 				stop_data = all_unique_trips[unique_trip][i]
 				next_stop_data = all_unique_trips[unique_trip][i+1]
 
-				for z in range(0,len(stop_data['time_tabled_services'])):
+				for z in range(0,len(stop_data['time_tabled_services'])-1):
 					dep_time = int(stop_data['time_tabled_services'][z]['departure_time'])
 			
 					try:
 						arr_time = int(next_stop_data['time_tabled_services'][z]['arrival_time'])
+					
 					except Exception as e:
+					
 						number = number + 1
 						data = {
 							"record" : next_stop_data ,

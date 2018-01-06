@@ -10,9 +10,9 @@ for file in glob.glob("../out/gtfs_edge*14*"):
 	print "Extracting from ", file
 	data = json.load(gzip.open(file))
 	results.extend(data)
-	for record in data:
-		id_ = record['']
+	# for record in data:
+		
 		
 print len(results), " results loaded"
 
-pprint(results[0])
+pprint(results[26])
