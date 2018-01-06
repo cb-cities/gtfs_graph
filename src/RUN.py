@@ -179,7 +179,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 					day = start_of_week + timedelta(days=i)
 					day_of_week = calendar.day_name[day.weekday()]
 					
-					if service_days_info[day_of_week.lower()] == 1:
+					if service_days_info[day_of_week.lower()] == 1 or service_days_info[day_of_week.lower()] == 1.0 :
 						
 						# Append date to this time to create a datetime object
 						try:
