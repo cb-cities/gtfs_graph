@@ -187,6 +187,8 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 						departure_time_dt = datetime.strptime(current_stop['departure_time'],"%H:%M:%S").time()
 					
 					except Exception as e:
+						print e
+						print current_stop
 						# If the service runs across midnight, you get incorrect time stamps like 24:01:00
 						# Here, we add a day and manually fix the timestamp 
 						new_time = timetable_day_over_run_ftn(day,current_stop['departure_time'])
