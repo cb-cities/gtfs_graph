@@ -65,7 +65,7 @@ def timetable_day_over_run_ftn(day, stamp):
 
 	# Add one day to day of week
 	day = timedelta(days=1)
-	new_time = "00" + current_stop['departure_time'][2:]
+	new_time = "00" + stamp['departure_time'][2:]
 	
 	return new_time
 
@@ -191,7 +191,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 						print current_stop
 						# If the service runs across midnight, you get incorrect time stamps like 24:01:00
 						# Here, we add a day and manually fix the timestamp 
-						new_time = timetable_day_over_run_ftn(day,current_stop['departure_time'])
+						new_time = timetable_day_over_run_ftn(day,current_stop)
 						departure_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
 
 					try:
@@ -199,7 +199,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 					
 					except Exception as e:
 
-						new_time = timetable_day_over_run_ftn(day,current_stop['arrival_time'])
+						new_time = timetable_day_over_run_ftn(day,current_stop)
 						arrival_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
 					
 					dep_gen_stamp = datetime.combine(day,departure_time_dt)
