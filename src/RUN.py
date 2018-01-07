@@ -53,6 +53,7 @@ def get_what_ya_need(path):
 			print "Creating stop_times db"
 			stop_times_df = pd.read_csv(file)
 			stop_times = json.loads(stop_times_df.to_json(orient='records'))
+			print len(stop_times), " stop times loaded"
 			# stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:100]
 			stop_times_db = {}
 			for stop in stop_times:
@@ -159,69 +160,69 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			service_id = trips_db[trip_id_1]['service_id']
 			
 			# Get calendar info from service_id
-			try:
+			# try:
 
-				date_info = datetime.strptime(str(calendar_db[service_id]['start_date']),'%Y%m%d')
+			date_info = datetime.strptime(str(calendar_db[service_id]['start_date']),'%Y%m%d')
 
-				# Let's find first Monday from the timetable
-				time_delta = 7 - int(date_info.weekday())
-				start_of_week = date_info + timedelta(days=time_delta)
-				
-				# Find end of week
-				end_of_week = start_of_week + timedelta(days=6)
-
-				service_days_info = calendar_db[service_id]
-
-				time_tabled_services = []
-				# Iterate over the week
-				for i in range(0,7):
-					
-					day = start_of_week + timedelta(days=i)
-					day_of_week = calendar.day_name[day.weekday()]
-					
-					if service_days_info[day_of_week.lower()] == 1 or service_days_info[day_of_week.lower()] == 1.0 :
-						
-						# Append date to this time to create a datetime object
-						try:
-							departure_time_dt = datetime.strptime(current_stop['departure_time'],"%H:%M:%S").time()
-						
-						except Exception as e:
-							# If the service runs across midnight, you get incorrect time stamps like 24:01:00
-							# Here, we add a day and manually fix the timestamp 
-							new_time = timetable_day_over_run_ftn(day,current_stop['departure_time'])
-							departure_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
-
-						try:
-							arrival_time_dt = datetime.strptime(current_stop['arrival_time'],"%H:%M:%S").time()
-						
-						except Exception as e:
-
-							new_time = timetable_day_over_run_ftn(day,current_stop['arrival_time'])
-							arrival_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
-						
-						dep_gen_stamp = datetime.combine(day,departure_time_dt)
-						arr_gen_stamp = datetime.combine(day,arrival_time_dt)
-
-						# Create a dict. Format time stamps as epoch to get rid of this str/datetime object nonsense
-						if start_of_route == True:
-							data = {
-								"departure_time" : dep_gen_stamp.strftime('%s'),
-							}
-
-						else:
-							data = {
-								"departure_time" : dep_gen_stamp.strftime('%s'),
-								"arrival_time" : arr_gen_stamp.strftime('%s')
-							}
-
-						time_tabled_services.append(data)
+			# Let's find first Monday from the timetable
+			time_delta = 7 - int(date_info.weekday())
+			start_of_week = date_info + timedelta(days=time_delta)
 			
-			except Exception as e:
-				data = {
-					"exception" : str(e),
-					"data" : service_id
-				}
-				error_log.append(data)
+			# Find end of week
+			end_of_week = start_of_week + timedelta(days=6)
+
+			service_days_info = calendar_db[service_id]
+
+			time_tabled_services = []
+			# Iterate over the week
+			for i in range(0,7):
+				
+				day = start_of_week + timedelta(days=i)
+				day_of_week = calendar.day_name[day.weekday()]
+				
+				if service_days_info[day_of_week.lower()] == 1 or service_days_info[day_of_week.lower()] == 1.0 :
+					
+					# Append date to this time to create a datetime object
+					try:
+						departure_time_dt = datetime.strptime(current_stop['departure_time'],"%H:%M:%S").time()
+					
+					except Exception as e:
+						# If the service runs across midnight, you get incorrect time stamps like 24:01:00
+						# Here, we add a day and manually fix the timestamp 
+						new_time = timetable_day_over_run_ftn(day,current_stop['departure_time'])
+						departure_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
+
+					try:
+						arrival_time_dt = datetime.strptime(current_stop['arrival_time'],"%H:%M:%S").time()
+					
+					except Exception as e:
+
+						new_time = timetable_day_over_run_ftn(day,current_stop['arrival_time'])
+						arrival_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
+					
+					dep_gen_stamp = datetime.combine(day,departure_time_dt)
+					arr_gen_stamp = datetime.combine(day,arrival_time_dt)
+
+					# Create a dict. Format time stamps as epoch to get rid of this str/datetime object nonsense
+					if start_of_route == True:
+						data = {
+							"departure_time" : dep_gen_stamp.strftime('%s'),
+						}
+
+					else:
+						data = {
+							"departure_time" : dep_gen_stamp.strftime('%s'),
+							"arrival_time" : arr_gen_stamp.strftime('%s')
+						}
+
+					time_tabled_services.append(data)
+			
+		except Exception as e:
+			data = {
+				"exception" : str(e),
+				"data" : service_id
+			}
+			error_log.append(data)
 			
 			data = {
 				'negativeNode' : neg_node,
@@ -301,7 +302,6 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			all_unique_trips[unique_trip][-1]['services'] = final_records
 		
 	except Exception as e:
-		pprint(e)
 		
 		print "Removing data due to error"
 		
