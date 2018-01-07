@@ -160,8 +160,6 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			service_id = trips_db[trip_id_1]['service_id']
 			
 			# Get calendar info from service_id
-			# try:
-
 			date_info = datetime.strptime(str(calendar_db[service_id]['start_date']),'%Y%m%d')
 
 			# Let's find first Monday from the timetable
@@ -216,13 +214,6 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 						}
 
 					time_tabled_services.append(data)
-			
-		# except Exception as e:
-		# 	data = {
-		# 		"exception" : str(e),
-		# 		"data" : service_id
-		# 	}
-		# 	error_log.append(data)
 			
 			data = {
 				'negativeNode' : neg_node,
