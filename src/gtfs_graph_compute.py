@@ -16,14 +16,28 @@ import ujson as json
 
 # pprint(results[26])
 
-error_log = json.load(gzip.open("../out/error_log_.json.gz"))
+error_log = json.load(gzip.open("../tmp_out/error_log_.json.gz"))
 print len(error_log)
 
 data = []
 for record in error_log:
-	status = record['data']
-	data.append(status)
+	exception = record['exception']
+	# status = record['data']
+	data.append(exception)
 
 data_un = list(set(data))
 
 pprint(data_un)
+
+# alt_log = json.load(gzip.open("../out/error_log_.json.gz"))
+# print len(alt_log)
+
+# data = []
+# for record in alt_log:
+# 	status = record['data']
+# 	data.append(status)
+
+# data_un = list(set(data))
+
+# pprint(data_un)
+
