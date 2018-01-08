@@ -368,7 +368,6 @@ def assess_gtfs_coverage(stop_times_db,trips_db,routes_db):
 			works = stop_times_db[trip_id]
 			print "found"
 		except KeyError:
-			print "not found"
 			route_missing = trips_db[trip_id]['route_id']
 			not_found.append(route_missing)
 
@@ -386,7 +385,7 @@ def assess_gtfs_coverage(stop_times_db,trips_db,routes_db):
 
 	# What trip ids in trips_db aren't mentioned in routes_db
 
-assess_gtfs_coverage(routes_db,trips_db,routes_db)
+# assess_gtfs_coverage(routes_db,trips_db,routes_db)
 
 create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times)
 
