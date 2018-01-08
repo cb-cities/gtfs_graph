@@ -227,7 +227,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			current_trip.append(data)
 
 		else:
-			# print "One trip extracted"
+			print "One trip extracted"
 
 			# Append all the results to big list
 			all_unique_trips.append(current_trip)
