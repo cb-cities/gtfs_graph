@@ -267,20 +267,20 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 
 		# Remove departure time from final record of each list (for reading clarity)
 
-		final_records = []
-		for record in range(0,len(all_unique_trips[unique_trip][-1]['time_tabled_services'])):	
-			journey_time = int(all_unique_trips[unique_trip][-1]['time_tabled_services'][record]['arrival_time']) - int(all_unique_trips[unique_trip][-2]['services'][record]['departure_time'])
+		# final_records = []
+		# for record in range(0,len(all_unique_trips[unique_trip][-1]['time_tabled_services'])):	
+		# 	journey_time = int(all_unique_trips[unique_trip][-1]['time_tabled_services'][record]['arrival_time']) - int(all_unique_trips[unique_trip][-2]['services'][record]['departure_time'])
 
-			data = {
-			"arrival_time" : all_unique_trips[unique_trip][-1]['time_tabled_services'][record]['arrival_time'],
-			"journey_time" : journey_time
-			}
+		# 	data = {
+		# 	"arrival_time" : all_unique_trips[unique_trip][-1]['time_tabled_services'][record]['arrival_time'],
+		# 	"journey_time" : journey_time
+		# 	}
 
-			final_records.append(data)
+		# 	final_records.append(data)
 
 		all_unique_trips[unique_trip][-1].pop("time_tabled_services")
 		
-		all_unique_trips[unique_trip][-1]['services'] = final_records
+		# all_unique_trips[unique_trip][-1]['services'] = final_records
 
 	print "Dumping results to file"
 
