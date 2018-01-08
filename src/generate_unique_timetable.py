@@ -5,6 +5,7 @@ import pandas as pd
 import glob
 import ujson as json
 from operator import itemgetter
+import sys
 
 error_log = json.load(gzip.open("../out/error_log_.json.gz"))
 print len(error_log), " errors detected"
@@ -40,9 +41,9 @@ output = []
 for unique_edge in unique_edges:
 	print "Looking for", unique_edge
 	unique_edge_data = []
-	for i in range(0,len(sorted_list)):
-		if sorted_list[i]['service_id'] == unique_edge:
-			unique_edge_data.append(sorted_list[i])
+	for record in sorted_list:
+		if record['service_id'] == unique_edge:
+			unique_edge_data.append(record)
 
 	print len(unique_edge_data), " records found"
 
@@ -54,7 +55,7 @@ print toc - tic
 
 print "Dumping to file"
 
-chunkSize = 10000
+chunkSize = 1000
 for i in xrange(0, len(output), chunkSize):
-	with gzip.open('../out/graph/edge_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
+	with gzip.open('../out/graph/unique_edge_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
 		json.dump(output[i:i+chunkSize], outfile, indent =2)
