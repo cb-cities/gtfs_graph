@@ -278,7 +278,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 
 		# 	final_records.append(data)
 
-		all_unique_trips[unique_trip][-1].pop("time_tabled_services")
+		# all_unique_trips[unique_trip][-1].pop("time_tabled_services")
 		
 		# all_unique_trips[unique_trip][-1]['services'] = final_records
 
