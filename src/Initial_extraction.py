@@ -341,7 +341,7 @@ def create_nodes(stops_db):
 		json.dump(address_data,outfile,indent=2)
 
 # tested with tfl_gtfs_2016-12-01_05
-path = "../tmp/tfl_gtfs_2016-12-01_05/gtfs/"
+path = "../tmp/tfl_gtfs_2017-02-07_05/gtfs/"
 
 file_list = []
 for file in glob.glob(path + "*"):
