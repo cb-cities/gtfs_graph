@@ -9,14 +9,33 @@ import calendar
 import sys
 import ftn_extract_tar_gz
 from pyproj import Proj, transform
+import os
 
 inProj = Proj(init='epsg:4326')
 outProj = Proj(init='epsg:27700')
 
+def check_if_gtfs_already_extracted(file):
+
+	folder = file[:-7]
+
+	if os.path.isdir(folder):
+		
+		print "GTFS already extracted"
+
+	else:
+
+		print "Extracting...."
+		ftn_extract_tar_gz.extract(file)
+
+	return folder + "/gtfs/"
+
 def get_what_ya_need(path):
+
+	print "Converting GTFS data into usable format"
+
 	for file in glob.glob(path + "*"):
 		file_name = file[35:-4]
-		
+
 		if file_name == "stops":
 			print "Creating stops db"
 			stops = pd.read_csv(file)
@@ -28,8 +47,6 @@ def get_what_ya_need(path):
 		elif file_name == "routes":
 			print "Creating routes db"
 			routes = pd.read_csv(file)
-			# print "Unique modes:"
-			# print routes.route_type.unique()
 			routes_js = json.loads(routes.to_json(orient='records'))
 			routes_db = {}
 			for route in routes_js:
@@ -38,8 +55,6 @@ def get_what_ya_need(path):
 		elif file_name == "trips":
 			print "Creating trips db"
 			trips = pd.read_csv(file)
-			# print "Unique route_ids:"
-			# print trips.route_id.unique()
 			trips_js = json.loads(trips.to_json(orient='records'))
 			trips_db = {}
 			for trip in trips_js:
@@ -114,6 +129,8 @@ def route_type_dict(route_data):
 	return queried_type
 
 def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times):
+
+	print "Creating edges for services"
 
 	all_unique_trips = []
 	current_trip = []
@@ -265,28 +282,11 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			all_unique_trips[unique_trip][i].pop("time_tabled_services")
 			all_unique_trips[unique_trip][i]['services'] = link_data
 
-		# Remove departure time from final record of each list (for reading clarity)
-
-		# final_records = []
-		# for record in range(0,len(all_unique_trips[unique_trip][-1]['time_tabled_services'])):	
-		# 	journey_time = int(all_unique_trips[unique_trip][-1]['time_tabled_services'][record]['arrival_time']) - int(all_unique_trips[unique_trip][-2]['services'][record]['departure_time'])
-
-		# 	data = {
-		# 	"arrival_time" : all_unique_trips[unique_trip][-1]['time_tabled_services'][record]['arrival_time'],
-		# 	"journey_time" : journey_time
-		# 	}
-
-		# 	final_records.append(data)
-
-		# all_unique_trips[unique_trip][-1].pop("time_tabled_services")
-		
-		# all_unique_trips[unique_trip][-1]['services'] = final_records
-
 	print "Dumping results to file"
 
 	chunkSize = 10000
 	for i in xrange(0, len(all_unique_trips), chunkSize):
-		with gzip.open('../out/gtfs_edge_data_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
+		with gzip.open('../out/all_edges/gtfs_edge_data_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
 			json.dump(all_unique_trips[i:i+chunkSize], outfile, indent =2)
 
 	print len(all_unique_trips), " trips generated"
@@ -297,69 +297,10 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 
 	print "Time per unique trip", time_per_unique_trip
 
-def create_nodes(stops_db):
-	nodes_data = []
-	address_data = []
-	
-	for key,val in stops_db.iteritems():
-			
-		node_data = {
-			
-			"index" : 0,
-			"toid" : val['stop_id'] ,
-			# Convert coordinate system
-			"point" : transform(inProj,outProj,val['stop_lon'],val['stop_lat'])
-		
-		}
-		
-		nodes_data.append(node_data)
-		
-		add_data = {
-
-			"toid" : val['stop_id'],
-			"text" : val['stop_name']
-		}
-		
-		address_data.append(add_data)
-
-	print "Re-indexing..."
-
-	for count, node in enumerate(nodes_data, start=0):
-		node['index'] = count
-
-	for count, add_data in enumerate(address_data, start=0):
-		add_data['index'] = count
-
-	print "Dumping node data"
-	with gzip.open("../out/gtfs_node_data.json.gz",'w') as outfile:
-		json.dump(nodes_data,outfile,indent=2)
-
-	print len(nodes_data), " nodes generated"
-
-	print "Dumping address data"
-	with gzip.open("../out/gtfs_address_data.json.gz",'w') as outfile:
-		json.dump(address_data,outfile,indent=2)
-
-# tested with tfl_gtfs_2016-12-01_05
-path = "../tmp/tfl_gtfs_2017-02-07_05/gtfs/"
-
-file_list = []
-for file in glob.glob(path + "*"):
-	file_list.append(file)
-
-if len(file_list) == 0:
-	ftn_extract_tar_gz.extract(path)
-
-else:
-
-	print "GTFS already extracted...."
-
-tic = time.time()
-print "Converting GTFS data into usable format"
-
-trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times = get_what_ya_need(path)
-
 def assess_gtfs_coverage(stop_times_db,trips_db,routes_db):
+	
+	# What trip ids in trips_db aren't mentioned in routes_db
+
 	not_found = []
 	
 	trip_ids = trips_db.keys()
@@ -382,16 +323,3 @@ def assess_gtfs_coverage(stop_times_db,trips_db,routes_db):
 
 	with gzip.open("../out/missing_routes.json.gz",'w') as outfile:
 		json.dump(data,outfile,indent=2)
-
-	# What trip ids in trips_db aren't mentioned in routes_db
-
-# assess_gtfs_coverage(routes_db,trips_db,routes_db)
-
-create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times)
-
-print "Starting to generate node data...."
-create_nodes(stops_db)
-print "Node data generation complete"
-toc = time.time()
-
-print "Overall time:", str(toc - tic)
