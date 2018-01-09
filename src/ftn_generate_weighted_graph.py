@@ -6,7 +6,7 @@ import glob
 import ujson as json
 import sys
 import pandas as pd
-# from ggplot import *
+from ggplot import *
 
 def gen_edges(path):
 	
@@ -45,11 +45,16 @@ def gen_edges(path):
 						"arrival_time" : service['arrival_time'],
 						"journey_time" : int(service['arrival_time']) - int(service['departure_time'])
 					}
-
+					if data['journey_time'] != 0:
+						print 'maybe not/...'
+						pprint(data)
 					data['route_type'] = route_type
 					data['route_id'] = route_id
 					data['route_agency'] = route_agency
-					weight_data.append(data)
+					
+					# This appears to be when journey times = 0.... skipping for now...
+
+					# weight_data.append(data)
 
 		# Order services by departure_time
 		ordered_weight_data = sorted(weight_data, key=lambda k: k['departure_time'])
@@ -58,43 +63,39 @@ def gen_edges(path):
 			"edge_id" : edge_id,
 			"negativeNode" : negativeNode,
 			"positiveNode" : positiveNode,
-			"weight_data" : ordered_weight_data
+			"services" : ordered_weight_data
 		}
 		
 		gen_edges.append(output)
 
-	return gen_edges	
+	return gen_edges
 
 def headway_calculator(edges):
 
 	headways = []
 	for edge in edges:
+		
+		# Extract service times
 		services = edge['services']
-		services = sorted(services, key=lambda k: k['departure_time'])
-		for i in range(0,len(services)-1):
-			
-			# Test - Only compare the same service
-			if services[i+1]['service_route_id'] == services[i]['service_route_id']:
+
+		# Order services by departure_time (again, as we may have multiple operators, and routes)
+		ordered_services = sorted(services, key=lambda k: k['departure_time'])
+		
+		for i in range(0,len(ordered_services)-1):
 				
-				headway = int(services[i+1]['departure_time']) - int(services[i]['departure_time'])
+			headway = int(ordered_services[i+1]['departure_time']) - int(ordered_services[i]['departure_time']) / 60.0
 				
-				if headway < 0:
-					print headway
-					pprint(services[i+1])
-					pprint(services[i])
-					sys.exit(1)
-			
-				# 10hrs
-				if headway < 2000:
-					time_stamp = services[i]['departure_time']
-					mode = services[i]['service_type']
-					
-					data = {
-						"headway" : headway,
-						"time_stamp" : time_stamp,
-						"mode" : mode
-					}
-					headways.append(data)
+			# 10hrs
+			if headway < 60:
+				time_stamp = ordered_services[i]['departure_time']
+				mode = ordered_services[i]['route_type']
+				
+				data = {
+					"headway" : headway,
+					"time_stamp" : time_stamp,
+					"mode" : mode
+				}
+				headways.append(data)
 
 	headways_df = pd.DataFrame(headways)
 
@@ -105,12 +106,12 @@ def headway_calculator(edges):
 	# Classify AM, PM and IP
 
 	s = ggplot(aes(x="headway",color="mode"),data=headways_df) + geom_density()
-	print s
+	
 	s.save("../out/plots/headway_density.png")
 
 generated_edges = gen_edges("../out/unique_edges/*unique_edge*13*.json.gz")
 
-pprint(generated_edges[0])
+# pprint(generated_edges[0])
 
 headway_calculator(generated_edges)
 
