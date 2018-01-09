@@ -12,9 +12,11 @@ def gen_edges(path):
 	
 	unique_edges = []
 	for file in glob.glob(path):
+		print "Loading:", file
 		data = json.load(gzip.open(file))
 		unique_edges.extend(data)
 
+	print len(unique_edges), " edges found"
 	gen_edges = []
 	for edge in unique_edges:
 		edge_id = edge['service_id']
@@ -70,51 +72,6 @@ def gen_edges(path):
 
 	return gen_edges
 
-def headway_calculator(edges):
-
-	headways = []
-	for edge in edges:
-		
-		# Extract service times
-		services = edge['services']
-
-		# Order services by departure_time (again, as we may have multiple operators, and routes)
-		ordered_services = sorted(services, key=lambda k: k['departure_time'])
-		
-		for i in range(0,len(ordered_services)-1):
-				
-			headway = int(ordered_services[i+1]['departure_time']) - int(ordered_services[i]['departure_time']) / 60.0
-				
-			# 10hrs
-			if headway < 60:
-				time_stamp = ordered_services[i]['departure_time']
-				mode = ordered_services[i]['route_type']
-				
-				data = {
-					"headway" : headway,
-					"time_stamp" : time_stamp,
-					"mode" : mode
-				}
-				headways.append(data)
-
-	headways_df = pd.DataFrame(headways)
-
-	# Convert time stamp
-	# Add day of week
-	# Add hour
-	# Create hour to AM, PM and IP ftn
-	# Classify AM, PM and IP
-
-	s = ggplot(aes(x="headway",color="mode"),data=headways_df) + geom_density()
-	
-	s.save("../out/plots/headway_density.png")
-
-generated_edges = gen_edges("../out/unique_edges/*unique_edge*13*.json.gz")
-
-# pprint(generated_edges[0])
-
-headway_calculator(generated_edges)
-
 def create_nodes(stops_db):
 	nodes_data = []
 	address_data = []
@@ -149,11 +106,23 @@ def create_nodes(stops_db):
 		add_data['index'] = count
 
 	print "Dumping node data"
-	with gzip.open("../out/gtfs_node_data.json.gz",'w') as outfile:
+	with gzip.open("../out/graph/gtfs_node_data.json.gz",'w') as outfile:
 		json.dump(nodes_data,outfile,indent=2)
 
 	print len(nodes_data), " nodes generated"
 
 	print "Dumping address data"
-	with gzip.open("../out/gtfs_address_data.json.gz",'w') as outfile:
+	with gzip.open("../out/graph/gtfs_address_data.json.gz",'w') as outfile:
 		json.dump(address_data,outfile,indent=2)
+
+# Gen yer edges
+generated_edges = gen_edges("../out/unique_edges/*unique_edge*.json.gz")
+
+print "Dumping edges to file"
+
+chunkSize = 10000
+for i in xrange(0, len(generated_edges), chunkSize):
+	with gzip.open('../out/graph/gtfs_edge_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
+		json.dump(generated_edges[i:i+chunkSize], outfile, indent =2)
+
+print "Finito"
