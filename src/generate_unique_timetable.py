@@ -7,9 +7,6 @@ import ujson as json
 from operator import itemgetter
 import sys
 
-error_log = json.load(gzip.open("../out/error_log_.json.gz"))
-print len(error_log), " errors detected"
-
 results = []
 for file in glob.glob("../out/gtfs_edge*"):
 	print "Extracting from ", file
