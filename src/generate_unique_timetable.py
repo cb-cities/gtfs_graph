@@ -44,8 +44,8 @@ toc = time.time()
 
 print (toc - tic) + " time elapsed for " + str(len(results)) + " records"
 
-output_values = output.values()
 output_keys = output.keys()
+output_values = output.values()
 
 print "Creating a nice JSON object out of the results"
 
@@ -57,23 +57,13 @@ for i in range(0,len(output_keys)):
 	}
 	results.append(data)
 
+print len(results), " unique edges found"
+
 print "Dumping to file"
 
 chunkSize = 1000
-for i in xrange(0, len(output), chunkSize):
+for i in xrange(0, len(results), chunkSize):
 	with gzip.open('../out/graph/unique_edge_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
-		json.dump(output[i:i+chunkSize], outfile, indent =2)
+		json.dump(results[i:i+chunkSize], outfile, indent =2)
 
 print "Finito"
-
-# output = []
-# for unique_edge in unique_edges:
-# 	print "Looking for", unique_edge
-# 	unique_edge_data = []
-# 	for record in sorted_list:
-# 		if record['service_id'] == unique_edge:
-# 			unique_edge_data.append(record)
-
-# 	print len(unique_edge_data), " records found"
-
-# 	output.append(unique_edge_data)
