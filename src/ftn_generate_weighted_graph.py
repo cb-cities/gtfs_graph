@@ -26,19 +26,22 @@ def gen_edges(path):
 			route_type = record['service_information']['route_type']
 			route_id = record['service_information']['route_id']
 			route_agency = record['service_information']['agency']
+			
 			try:
 				for service in record['services']:
 					data = {
-					"departure_time" : service['departure_time'],
-					"arrival_time" : service['arrival_time'],
-					"journey_time" : service['journey_time']
+						"departure_time" : service['departure_time'],
+						"arrival_time" : service['arrival_time'],
+						"journey_time" : service['journey_time']
 					}
 
 					data['route_type'] = route_type
 					data['route_id'] = route_id
 					data['route_agency'] = route_agency
 					weight_data.append(data)
+			
 			except KeyError:
+
 				# Not sure why this is happening.... to come back to..
 				for service in record['time_tabled_services']:
 					data = {
@@ -119,7 +122,7 @@ generated_edges = gen_edges("../out/unique_edges/*unique_edge*.json.gz")
 
 print "Dumping edges to file"
 
-chunkSize = 10000
+chunkSize = 1000
 for i in xrange(0, len(generated_edges), chunkSize):
 	with gzip.open('../out/graph/gtfs_edge_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
 		json.dump(generated_edges[i:i+chunkSize], outfile, indent =2)
