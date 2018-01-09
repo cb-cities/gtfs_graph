@@ -42,7 +42,7 @@ for record in sorted_list:
 	output[key].append(record)
 toc = time.time()
 
-print (toc - tic) + " time elapsed for " + str(len(results)) + " records"
+print str(toc - tic) + " time elapsed for " + str(len(results)) + " records"
 
 output_keys = output.keys()
 output_values = output.values()
