@@ -6,7 +6,6 @@ import glob
 import ujson as json
 import sys
 import pandas as pd
-from ggplot import *
 
 def gen_edges(path):
 	
