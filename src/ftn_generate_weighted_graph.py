@@ -6,6 +6,10 @@ import glob
 import ujson as json
 import sys
 import pandas as pd
+from pyproj import Proj, transform
+
+inProj = Proj(init='epsg:27700')
+outProj = Proj(init='epsg:4326')
 
 def gen_edges(path):
 	
@@ -118,13 +122,13 @@ def create_nodes(stops_db):
 		json.dump(address_data,outfile,indent=2)
 
 # Gen yer edges
-generated_edges = gen_edges("../out/unique_edges/*unique_edge*.json.gz")
+# generated_edges = gen_edges("../out/unique_edges/*unique_edge*.json.gz")
 
-print "Dumping edges to file"
+# print "Dumping edges to file"
 
-chunkSize = 1000
-for i in xrange(0, len(generated_edges), chunkSize):
-	with gzip.open('../out/graph/gtfs_edge_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
-		json.dump(generated_edges[i:i+chunkSize], outfile, indent =2)
+# chunkSize = 1000
+# for i in xrange(0, len(generated_edges), chunkSize):
+# 	with gzip.open('../out/graph/gtfs_edge_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
+# 		json.dump(generated_edges[i:i+chunkSize], outfile, indent =2)
 
-print "Finito"
+# print "Finito"
