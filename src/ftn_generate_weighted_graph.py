@@ -88,8 +88,7 @@ def create_nodes(stops_db):
 			
 			"index" : 0,
 			"toid" : val['stop_id'] ,
-			# Convert coordinate system
-			"point" : transform(inProj,outProj,val['stop_lon'],val['stop_lat'])
+			"point" : (val['stop_lat'],val['stop_lon'])
 		
 		}
 		
