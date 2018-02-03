@@ -15,40 +15,53 @@ def convert_points(east_north):
 
 	return transform(inProj,outProj,east_north[0],east_north[1])
 
+nodes_db = {}
+
 for mode in all_modes_list:
+	
 	print "Working on mode: ", mode
 	
 	for file in glob.glob("../out/Vis/*"+ mode + "*"):
 		name = file[file.rfind("/")+1:file.rfind("_")]
 		data = json.load(gzip.open(file))
-		if not os.path.exists("../out/Vis/"+mode+"/"):
-				os.makedirs("../out/Vis/"+mode+"/")
+		if not os.path.exists("../out/sierra-charlie/"+mode+"/"):
+				os.makedirs("../out/sierra-charlie/"+mode+"/")
 		
 		if name == "nodes":
-			nodes_db = {}
 			for node in data:
 				point = (node['point'][1], node['point'][0])
-				pprint(point)
 				node['point'] = convert_points(point)
-				pprint(node)
-				sys.exit(1)
 				nodes_db[node['toid']] = node
 
-		# 	print "Dumping nodes"
-		# 	with gzip.open("../out/Vis/"+mode+"/nodes1.json.gz",'w') as outfile:
-		# 		json.dump(data,outfile,indent=2)
+			for count, record in enumerate(data, start=0):
+				record['index'] = count
 
-		# elif name == "links":
-		# 	for record in data:
-		# 		record['toid'] = record['edge_id']
-		# 		record.pop("edge_id")
-		# 		record['polyline'] = []
-		# 		record['polyline'].extend(nodes_db[record['negativeNode']]['point'])
-		# 		record['polyline'].extend(nodes_db[record['positiveNode']]['point'])
-		# 		record['index'] = 0
-		# 		print "Dumping links"
-		# 		with gzip.open("../out/Vis/"+mode+"/links1.json.gz",'w') as outfile:
-		# 			json.dump(data,outfile,indent=2)
-			
+			print "Dumping nodes"
+			with gzip.open("../out/sierra-charlie/"+mode+"/nodes1.json.gz",'w') as outfile:
+				json.dump(data,outfile,indent=2)
 
+
+for mode in all_modes_list:
+	
+	print "Working on mode: ", mode
+	
+	for file in glob.glob("../out/Vis/*"+ mode + "*"):
+		name = file[file.rfind("/")+1:file.rfind("_")]
+
+		if name == "links":
+			data = json.load(gzip.open(file))
+			for record in data:
+				record['toid'] = record['edge_id']
+				record.pop("edge_id")
+				record['polyline'] = []
+				record['polyline'].extend(nodes_db[record['negativeNode']]['point'])
+				record['polyline'].extend(nodes_db[record['positiveNode']]['point'])
+				record['index'] = 0
+
+			for count, record in enumerate(data, start=0):
+				record['index'] = count
+				
+			print "Dumping links"
+			with gzip.open("../out/sierra-charlie/"+mode+"/links1.json.gz",'w') as outfile:
+				json.dump(data,outfile,indent=2)
 
