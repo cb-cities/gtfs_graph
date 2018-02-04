@@ -104,7 +104,7 @@ def gen_frequency_based_weighted_graph(stops_db):
 					record['journey_time'] = average_jt
 					record['mode(s)'] = list(set(modes))
 					record['toid'] = record['edge_id']
-					record.pop("toid")
+					record.pop("edge_id")
 					record['index'] = 0
 					record['graph'] = "pt"
 					record.pop("services")
@@ -113,7 +113,7 @@ def gen_frequency_based_weighted_graph(stops_db):
 		print len(output), "extracted"
 		print len(data), " original length"
 		
-		with gzip.open("../out/frequency_graph/gtfs_"+name+".json.gz",'w') as outfile:
+		with gzip.open("../out/frequency_graph/pt_"+name+".json.gz",'w') as outfile:
 			json.dump(output,outfile,indent=2)
 
 def create_nodes(stops_db):
