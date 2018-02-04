@@ -20,4 +20,7 @@ trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times = ftn_init
 # ftn_generate_unique_edges.generate_unique_edges("../out/gtfs_edge*")
 
 # print "Starting to generate node data...."
-ftn_generate_weighted_graph.create_nodes(stops_db)
+# ftn_generate_weighted_graph.create_nodes(stops_db)
+
+# gen an average weighted graph (for all records)
+ftn_generate_weighted_graph.gen_frequency_based_weighted_graph(stops_db)

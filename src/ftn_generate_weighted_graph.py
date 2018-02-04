@@ -78,6 +78,44 @@ def gen_edges(path):
 
 	return gen_edges
 
+def gen_frequency_based_weighted_graph(stops_db):
+	for file in glob.glob("../out/graph/*edge*.json.gz"):
+		name = file[file.rfind("edge_"):-8]
+		print "Working on ", name
+		output = []
+		data = json.load(gzip.open(file))
+		for record in data:
+			modes = []
+			jts = []
+			if len(record['services']) != 0:
+				for jt in record['services']:
+					jts.append(jt['journey_time'])
+					modes.append(jt['route_type'])
+				
+				average_jt = sum(jts) / float(len(record['services']))
+				
+				if average_jt > 0:
+					polyline = []
+					start = transform(outProj,inProj,stops_db[record['negativeNode']]['stop_lon'],stops_db[record['negativeNode']]['stop_lat'])
+					end = transform(outProj,inProj,stops_db[record['positiveNode']]['stop_lon'],stops_db[record['positiveNode']]['stop_lat'])
+					polyline.extend(start)
+					polyline.extend(end)
+					record['polyline'] = polyline
+					record['journey_time'] = average_jt
+					record['mode(s)'] = list(set(modes))
+					record['toid'] = record['edge_id']
+					record.pop("toid")
+					record['index'] = 0
+					record['graph'] = "pt"
+					record.pop("services")
+					output.append(record)
+
+		print len(output), "extracted"
+		print len(data), " original length"
+		
+		with gzip.open("../out/frequency_graph/gtfs_"+name+".json.gz",'w') as outfile:
+			json.dump(output,outfile,indent=2)
+
 def create_nodes(stops_db):
 	nodes_data = []
 	address_data = []
@@ -119,15 +157,3 @@ def create_nodes(stops_db):
 	print "Dumping address data"
 	with gzip.open("../out/graph/gtfs_address_data.json.gz",'w') as outfile:
 		json.dump(address_data,outfile,indent=2)
-
-# Gen yer edges
-# generated_edges = gen_edges("../out/unique_edges/*unique_edge*.json.gz")
-
-# print "Dumping edges to file"
-
-# chunkSize = 1000
-# for i in xrange(0, len(generated_edges), chunkSize):
-# 	with gzip.open('../out/graph/gtfs_edge_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
-# 		json.dump(generated_edges[i:i+chunkSize], outfile, indent =2)
-
-# print "Finito"
