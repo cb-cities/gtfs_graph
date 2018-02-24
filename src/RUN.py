@@ -11,7 +11,7 @@ trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times = ftn_init
 
 # Check the GTFS data itself
 # no point during testing....
-# ftn_initial_extraction.assess_gtfs_coverage(stop_times_db,trips_db,routes_db)
+ftn_initial_extraction.assess_gtfs_coverage(stop_times_db,trips_db,routes_db)
 
 # Create edges per service
 all_gtfs_edges = ftn_initial_extraction.create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times)

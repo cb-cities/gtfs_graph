@@ -81,7 +81,7 @@ def get_what_ya_need(path):
 		elif file_name == "stop_times":
 			print "Creating stop_times db"
 			stop_times_df = pd.read_csv(file)
-			stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:1000]
+			stop_times = json.loads(stop_times_df.to_json(orient='records'))
 			print len(stop_times), " stop times loaded"
 			stop_times_db = {}
 			for stop in stop_times:
