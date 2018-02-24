@@ -18,6 +18,7 @@ def london_mode_converter(mode):
 		return "Tram"
 
 	else:
+		
 		return mode
 
 def headway_extractor(edges):
@@ -73,6 +74,7 @@ def day_to_day_name(day):
 
 
 pickled_file = "../out/graph/pickled_edges.pkl"
+
 if Path(pickled_file).is_file():
 	
 	print "Pickeld versions exists, loading..."
@@ -105,10 +107,6 @@ else:
 
 	# Add day of week
 	headways_df['day_type'] = headways_df.apply(lambda row: day_to_day_name(row['day_of_week_int']), axis=1)
-
-	# Add hour
-	# Create hour to AM, PM and IP ftn
-	# Classify AM, PM and IP
 
 	headways_df.to_pickle(pickled_file)
 

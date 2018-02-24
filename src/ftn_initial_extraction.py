@@ -2,17 +2,27 @@ import gzip
 import time
 from pprint import pprint
 import pandas as pd
+import tarfile
 import glob
 import ujson as json
 from datetime import datetime, timedelta
 import calendar
 import sys
-import ftn_extract_tar_gz
 from pyproj import Proj, transform
 import os
 
 inProj = Proj(init='epsg:4326')
 outProj = Proj(init='epsg:27700')
+
+def extract(file_name):
+
+	print "Working on ", file_name
+	dest_folder = "../tmp/"
+	
+	tar = tarfile.open(file_name, "r:gz")
+	tar.extractall(dest_folder)
+	
+	tar.close()
 
 def check_if_gtfs_already_extracted(file):
 
@@ -25,7 +35,7 @@ def check_if_gtfs_already_extracted(file):
 	else:
 
 		print "Extracting...."
-		ftn_extract_tar_gz.extract(file)
+		extract(file)
 
 	return folder + "/gtfs/"
 
@@ -71,7 +81,7 @@ def get_what_ya_need(path):
 		elif file_name == "stop_times":
 			print "Creating stop_times db"
 			stop_times_df = pd.read_csv(file)
-			stop_times = json.loads(stop_times_df.to_json(orient='records'))
+			stop_times = json.loads(stop_times_df.to_json(orient='records'))[0:1000]
 			print len(stop_times), " stop times loaded"
 			stop_times_db = {}
 			for stop in stop_times:
@@ -79,11 +89,70 @@ def get_what_ya_need(path):
 
 	return trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times
 
-def timetable_day_over_run_ftn(day, stamp):
+def generate_unique_edges(results):
 
-	# Add one day to day of week
-	day = timedelta(days=1)
-	new_time = "00" + stamp['departure_time'][2:]
+	print "Generating unique edge files"
+
+	print len(results), " edges loaded"
+
+	print "Generating unique edge id"
+	edge_ids = []
+	for result in results:
+		for data in result:
+			edge_id = data['negativeNode'] + data['positiveNode']
+			data['service_id'] = edge_id
+			edge_ids.append(edge_id)
+
+	unique_edges = list(set(edge_ids))
+
+	print "Flatting edges list"
+
+	results_flat = [item for sublist in results for item in sublist]
+
+	print "Sorting edges list by service_id"
+
+	sorted_list = sorted(results_flat, key=lambda k: k['service_id'])
+
+	print "Now extracting unique edges"
+
+	tic = time.time()
+	output = {}
+	for record in sorted_list:
+		key = record['service_id']
+		if key not in output:
+			output[key] = []
+		output[key].append(record)
+	toc = time.time()
+
+	print str(toc - tic) + " time elapsed for " + str(len(results)) + " records"
+
+	output_keys = output.keys()
+	output_values = output.values()
+
+	print "Creating a nice JSON object out of the results"
+
+	results = []
+	for i in range(0,len(output_keys)):
+		data = {
+			"service_id" : output_keys[i],
+			"records" : output_values[i]
+		}
+		results.append(data)
+
+	print len(results), " unique edges found"
+
+	return results
+
+def timetable_day_over_run_ftn(stamp):
+
+	# this is really bloody hacky... you can't use python datetime lib as it freaks out at non 24hr days...
+	# take first 2 charactes, turn to int, take away 24
+	new_hr = str(int(stamp['departure_time'][:2]) - 24)
+
+	if len(new_hr) == 1:
+		new_hr = "0" + new_hr 
+
+	new_time = (str(new_hr)+stamp['departure_time'][2:])
 	
 	return new_time
 
@@ -136,8 +205,6 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 	current_trip = []
 	previous_step_sequence = 1
 
-	tic = time.time()
-
 	print len(stop_times), " stop_times loaded"
 
 	for i in range(0,len(stop_times)-1):
@@ -155,8 +222,8 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			"route_type" : route_type_dict(route_data['route_type'])
 		}
 
-
 		next_stop = stop_times[i+1]
+
 		if next_stop['stop_sequence'] > previous_step_sequence:
 
 			if current_stop['stop_sequence'] == 1:
@@ -193,6 +260,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			service_days_info = calendar_db[service_id]
 
 			time_tabled_services = []
+			
 			# Iterate over the week
 			for i in range(0,7):
 				
@@ -204,29 +272,53 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 					# Append date to this time to create a datetime object
 					try:
 						departure_time_dt = datetime.strptime(current_stop['departure_time'],"%H:%M:%S").time()
+						dep_day = day
 					
 					except Exception as e:
 						# If the service runs across midnight, you get incorrect time stamps like 24:01:00
-						# Here, we add a day and manually fix the timestamp 
-						new_time = timetable_day_over_run_ftn(day,current_stop)
+						# Here, we add a day and manually fix the timestamp
+						new_time = timetable_day_over_run_ftn(current_stop)
 						departure_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
+						# Add the day
+						dep_day = day + timedelta(1)
 
 					try:
-						arrival_time_dt = datetime.strptime(current_stop['arrival_time'],"%H:%M:%S").time()
+						arrival_time_dt = datetime.strptime(next_stop['arrival_time'],"%H:%M:%S").time()
+						arr_day = day
 					
 					except Exception as e:
 
-						new_time = timetable_day_over_run_ftn(day,current_stop)
+						# If the service runs across midnight, you get incorrect time stamps like 24:01:00
+						# Here, we add a day and manually fix the timestamp
+						new_time = timetable_day_over_run_ftn(next_stop)
 						arrival_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
+						# Add the day
+						arr_day = day + timedelta(1)
 					
-					dep_gen_stamp = datetime.combine(day,departure_time_dt)
-					arr_gen_stamp = datetime.combine(day,arrival_time_dt)
+					# Convert and format time stamps as epoch to get rid of this str/datetime object nonsense
+					dep_gen_stamp = int((datetime.combine(dep_day,departure_time_dt)).strftime('%s'))
+					arr_gen_stamp = int((datetime.combine(arr_day,arrival_time_dt)).strftime('%s'))
+					journey_time = arr_gen_stamp - dep_gen_stamp
 
-					# Create a dict. Format time stamps as epoch to get rid of this str/datetime object nonsense
+					if journey_time < 0:
+
+						print "day", day
+						
+						print "negative Node"
+						pprint(current_stop)
+						print "positive Node"
+						pprint(next_stop)
+
+						print "journey time ", journey_time
+						sys.exit(1)
+
+					# Create a dict of ze results
+
 					data = {
 						
-						"departure_time" : dep_gen_stamp.strftime('%s'),
-						"arrival_time" : arr_gen_stamp.strftime('%s')
+						"departure_time" : dep_gen_stamp,
+						"arrival_time" : arr_gen_stamp,
+						'journey_time' : journey_time
 						
 						}
 
@@ -237,13 +329,14 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 				"positiveNode" : pos_node,
 				"trip_id" : trip_id_1,
 				"stop_sequence" : stop_sequence,
-				"time_tabled_services" : time_tabled_services,
+				"services" : time_tabled_services,
 				"service_information" : route_data
 			}
 
 			current_trip.append(data)
 
 		else:
+
 			print "One trip extracted"
 
 			# Append all the results to big list
@@ -255,51 +348,11 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			# Reset list
 			current_trip = []
 
-	collated_outputs = []
-
-	# Second sweep
-
-	for unique_trip in range(len(all_unique_trips)):
-
-		for i in range(0,len(all_unique_trips[unique_trip])-1):
-			link_data = []
-			stop_data = all_unique_trips[unique_trip][i]
-			next_stop_data = all_unique_trips[unique_trip][i+1]
-
-			for z in range(0,len(stop_data['time_tabled_services'])):
-				dep_time = int(stop_data['time_tabled_services'][z]['departure_time'])
-		
-				arr_time = int(next_stop_data['time_tabled_services'][z]['arrival_time'])
-				
-				data = {
-					"departure_time" : dep_time,
-					"arrival_time" : arr_time,
-					"journey_time" : (arr_time - dep_time)
-				}
-				
-				link_data.append(data)
-			
-			all_unique_trips[unique_trip][i].pop("time_tabled_services")
-			all_unique_trips[unique_trip][i]['services'] = link_data
-
-	print "Dumping results to file"
-
-	chunkSize = 10000
-	for i in xrange(0, len(all_unique_trips), chunkSize):
-		with gzip.open('../out/all_edges/gtfs_edge_data_' + str((i//chunkSize)+1) + '.json.gz', 'w') as outfile:
-			json.dump(all_unique_trips[i:i+chunkSize], outfile, indent =2)
-
-	print len(all_unique_trips), " trips generated"
-
-	toc = time.time()
-
-	time_per_unique_trip = (toc - tic) / len(all_unique_trips)
-
-	print "Time per unique trip", time_per_unique_trip
+	return all_unique_trips
 
 def assess_gtfs_coverage(stop_times_db,trips_db,routes_db):
 	
-	# What trip ids in trips_db aren't mentioned in routes_db
+	# Find what trip ids in trips_db aren't mentioned in routes_db
 
 	not_found = []
 	
@@ -307,19 +360,22 @@ def assess_gtfs_coverage(stop_times_db,trips_db,routes_db):
 	for trip_id in trip_ids:
 		try:
 			works = stop_times_db[trip_id]
-			print "found"
 		except KeyError:
 			route_missing = trips_db[trip_id]['route_id']
+			print "Route ", route_missing, " not found in routes_db"
 			not_found.append(route_missing)
 
 	unique_missing = list(set(not_found))
 
 	data = [{
-	"missing_route_ids" : not_found
+		
+		"missing_route_ids" : not_found
+	
 	}]
 
-	print len(unique_missing), " missing"
-	print len(routes_db), " in original list"
+	print "There are " + str(len(unique_missing)) + " missing records from the original " + str(len(routes_db))
 
-	with gzip.open("../out/missing_routes.json.gz",'w') as outfile:
+	print "Dumping to file (../out/data_errors/missing_routes.json.gz)"
+
+	with gzip.open("../out/data_errors/missing_routes.json.gz",'w') as outfile:
 		json.dump(data,outfile,indent=2)
