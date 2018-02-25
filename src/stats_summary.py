@@ -213,19 +213,51 @@ for add in addresses:
 
 # compute_page_rank(nodes, links,"no_services",addresses_db)
 
-all_modes_list = [u'Bus', u'Subway, Metro', u'Tram, Streetcar, Light rail', u'Ferry']
+all_modes_list = [u'Subway, Metro', u'Bus', u'Tram, Streetcar, Light rail', u'Ferry']
 
 # ~10mins run time
 for mode in all_modes_list:
 
 	print "Computing for mode", mode
 	
-	# create a dir for results, if not exists
-	check_dir("../out/pagerank_stats/" + mode)
+	try:
+		
+		print "Found existing results, loading from file"
 
-	tmp_nodes, tmp_links = filter_graph_modes(nodes,links,mode,nodes_db)
-	
-	compute_page_rank_per_mode(tmp_nodes,tmp_links,"journey_time",addresses_db,mode)
+		pagerank_data = json.load(gzip.open("../out/pagerank_stats/"+mode+"/pagerank.json.gz"))
+		pagerank_data_db = {}
+		for record in pagerank_data:
+			pagerank_data_db[record['toid']] = record
+
+		tmp_nodes, tmp_links = filter_graph_modes(nodes,links,mode,nodes_db)
+		for tmp_node in tmp_nodes:
+			tmp_node['pagerank'] = pagerank_data_db[tmp_node['toid']]['PageRank_%']
+
+		local_graph = igraph.Graph.DictList(vertices=tmp_nodes,edges=tmp_links, vertex_name_attr="toid",edge_foreign_keys=('negativeNode',"positiveNode"),directed=True)
+
+		coordinates = []
+		for vertex in local_graph.vs:
+			vertex['label'] = addresses_db[vertex['toid']]['text']
+			coords = (vertex['point'][0],vertex['point'][1])
+			coordinates.append(coords)
+		
+		print local_graph.summary()
+
+		# Let's use the coordinates for the actual layour
+		layout = coordinates
+
+		file_name = "../out/pagerank_stats/" + mode + "/pagerank_vis.pdf"
+
+		igraph.plot(local_graph,file_name,layout=layout)
+
+		# sys.exit(1)
+
+	except IOError:
+
+		print "Result not found, computing"
+		check_dir("../out/pagerank_stats/" + mode)
+		
+		compute_page_rank_per_mode(tmp_nodes,tmp_links,"journey_time",addresses_db,mode)
 
 # metrics = []
 # for mode in all_modes_list:
