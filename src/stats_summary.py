@@ -250,8 +250,6 @@ for mode in all_modes_list:
 
 		igraph.plot(local_graph,file_name,layout=layout)
 
-		# sys.exit(1)
-
 	except IOError:
 
 		print "Result not found, computing"
