@@ -171,6 +171,8 @@ def filter_graph_modes(nodes, links, mode, nodes_db):
 		# 	record['toid'] = record['edge_id']
 		# 	record.pop("edge_id")
 
+		record.pop('services')
+
 	tmp_nodes = extract_nodes(tmp_edges, nodes_db)
 
 	print len(tmp_edges), " edges loaded"
