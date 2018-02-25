@@ -225,7 +225,7 @@ for mode in all_modes_list:
 
 	tmp_nodes, tmp_links = filter_graph_modes(nodes,links,mode,nodes_db)
 	
-	compute_page_rank_per_mode(tmp_nodes,tmp_links,"no_services",addresses_db,mode)
+	compute_page_rank_per_mode(tmp_nodes,tmp_links,"journey_time",addresses_db,mode)
 
 # metrics = []
 # for mode in all_modes_list:
