@@ -6,7 +6,7 @@ import glob
 import igraph
 from pprint import pprint
 
-def compute_page_rank(nodes,pagerank_weight):
+def compute_page_rank(nodes,links,pagerank_weight,addresses_db):
 
 	gtfs_graph = igraph.Graph.DictList(vertices=nodes,edges=links, vertex_name_attr="toid",edge_foreign_keys=('negativeNode',"positiveNode"),directed=True)
 
@@ -34,9 +34,40 @@ def compute_page_rank(nodes,pagerank_weight):
 	print "Sorting PageRank results"
 	pagerank_output = sorted(output, key=lambda x:x['PageRank_%'],reverse=True)
 
-	print "Dumping to file ", mode
+	with gzip.open("../out/pagerank_stats/pagerank_all.json.gz",'w') as outfile:
+		json.dump(pagerank_output,outfile,indent=2)
 
-	with gzip.open("../out/pagerank_stats/pagerank_" + mode + ".json.gz",'w') as outfile:
+def compute_page_rank_per_mode(nodes,links,pagerank_weight,addresses_db,mode):
+
+	gtfs_graph = igraph.Graph.DictList(vertices=nodes,edges=links, vertex_name_attr="toid",edge_foreign_keys=('negativeNode',"positiveNode"),directed=True)
+
+	print gtfs_graph.summary() + " for mode :" + str(mode)
+
+	print "Computing PageRank"
+
+	pagerank_values = gtfs_graph.pagerank(weights=pagerank_weight,directed=True)
+
+	print len(pagerank_values), "pagerank results"
+
+	print "Curating PageRank results"
+
+	vertex_list = []
+	for v in gtfs_graph.vs:
+		vertex_list.append(v)
+
+	output = []
+	for i in range(0,len(pagerank_values)):
+		data = {
+			"toid" : vertex_list[i]['toid'],
+			"name" : addresses_db[vertex_list[i]['toid']]['text'],
+			"PageRank_%" : pagerank_values[i] * 100
+		}
+		output.append(data)
+
+	print "Sorting PageRank results"
+	pagerank_output = sorted(output, key=lambda x:x['PageRank_%'],reverse=True)
+
+	with gzip.open("../out/pagerank_stats/" + mode + "/pagerank.json.gz",'w') as outfile:
 		json.dump(pagerank_output,outfile,indent=2)
 
 def compute_aggregated_page_rank(mode):
@@ -87,7 +118,7 @@ def check_dir(directory):
 
 # below for extracting sub graphs
 
-def extract_nodes(edges):
+def extract_nodes(edges,nodes_db):
 	
 	nodes_toid_list = []
 	for edge in edges:
@@ -110,69 +141,96 @@ def filter_mode(record, mode):
 		if service['route_type'] == mode:
 			output.append(service)
 	
-	record.pop('services')
-	record['services'] = output
-	
-	return record
+	if len(output) != 0:
+		
+		record.pop('services')
+		record['services'] = output
+		return True, record
 
-def filter_graph_modes(mode):
+	else:
+		return False, 0
+
+def filter_graph_modes(nodes, links, mode, nodes_db):
 
 	print "extracting records for mode: ", mode
-	
-	tmp_nodes = []
+
 	tmp_edges = []
-
-	for file in glob.glob("../out/graph/*edge*.json.gz"):
 		
-		print "Loading", file
-		data = json.load(gzip.open(file))
+	for record in links:
+
+		sample_record = record
 		
-		for record in data:
-			
-			record = filter_mode(record,mode)
+		match_status, matches = filter_mode(sample_record,mode)
 
-			# Just for sierra-charlie
-			for record in tmp_edges:
-				record['toid'] = record['edge_id']
-				record.pop("edge_id")
+		if match_status == True:
 
-			tmp_edges.append(record)
+			tmp_edges.append(matches)
 
-	tmp_nodes = extract_nodes(tmp_edges)
+		# Just for sierra-charlie
+		# for record in tmp_edges:
+		# 	record['toid'] = record['edge_id']
+		# 	record.pop("edge_id")
+
+	tmp_nodes = extract_nodes(tmp_edges, nodes_db)
 
 	print len(tmp_edges), " edges loaded"
 	print len(tmp_nodes), " nodes loaded"
 
-	print "Dumping nodes"
-	with gzip.open("../out/sierra-charlie/"+mode+"/nodes1.json.gz",'w') as outfile:
-		json.dump(data,outfile,indent=2)
+	# print "Dumping nodes"
+	# with gzip.open("../out/sierra-charlie/"+mode+"/nodes1.json.gz",'w') as outfile:
+	# 	json.dump(data,outfile,indent=2)
 
-	print "Dumping links"
-	with gzip.open("../out/sierra-charlie/"+mode+"/links1.json.gz",'w') as outfile:
-		json.dump(tmp_edges,outfile,indent=2)
+	# print "Dumping links"
+	# with gzip.open("../out/sierra-charlie/"+mode+"/links1.json.gz",'w') as outfile:
+	# 	json.dump(tmp_edges,outfile,indent=2)
+
+	return tmp_nodes, tmp_edges
+
+links = []
+for file in glob.glob("../out/graph/*edges*"):
+	print "Loading ", file
+	data = json.load(gzip.open(file))
+	for link in data:
+		link['no_services'] = len(link['services'])
+		# link.pop("services")
+		links.append(link)
+
+print len(links), " links loaded"
 
 # Load addresses
-addresses = json.load(gzip.open("../out/graph/gtfs_address_data.json.gz"))
+addresses = json.load(gzip.open("../out/graph/addresses_1.json.gz"))
 print len(addresses), " addresses loaded"
+nodes = json.load(gzip.open("../out/graph/nodes_1.json.gz"))
+print len(nodes), " nodes loaded"
+
+nodes_db = {}
+for node in nodes:
+	nodes_db[node['toid']] = node
 
 addresses_db = {}
 for add in addresses:
 	addresses_db[add['toid']] = add
 
-all_modes_list = [u'Bus', u'Subway, Metro', u'Tram, Streetcar, Light rail', u'Ferry', u'']
+# compute_page_rank(nodes, links,"no_services",addresses_db)
+
+all_modes_list = [u'Bus', u'Subway, Metro', u'Tram, Streetcar, Light rail', u'Ferry']
 
 # ~10mins run time
 for mode in all_modes_list:
+
+	print "Computing for mode", mode
 	
 	# create a dir for results, if not exists
-	check_dir("../out/sierra-charlie/" + mode)
+	check_dir("../out/pagerank_stats/" + mode)
+
+	tmp_nodes, tmp_links = filter_graph_modes(nodes,links,mode,nodes_db)
 	
-	compute_page_rank_per_mode(mode)
+	compute_page_rank_per_mode(tmp_nodes,tmp_links,"no_services",addresses_db,mode)
 
-metrics = []
-for mode in all_modes_list:
-	data = compute_aggregated_page_rank(mode)
-	metrics.append(data)
+# metrics = []
+# for mode in all_modes_list:
+# 	data = compute_aggregated_page_rank(mode)
+# 	metrics.append(data)
 
-with gzip.open("../out/pagerank_stats/pagerank_stats_all_modes.json.gz","w") as outfile:
-	json.dump(metrics,outfile,indent=2)
+# with gzip.open("../out/pagerank_stats/pagerank_stats_all_modes.json.gz","w") as outfile:
+# 	json.dump(metrics,outfile,indent=2)
