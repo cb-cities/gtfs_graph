@@ -246,7 +246,8 @@ for mode in all_modes_list:
 		print local_graph.summary()
 
 		# Let's use the coordinates for the actual layour
-		layout = coordinates
+		# layout = coordinates
+		layout = local_graph.layout_kamada_kawai()
 
 		file_name = "../out/pagerank_stats/" + mode + "/pagerank_vis.pdf"
 
