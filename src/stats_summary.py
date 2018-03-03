@@ -5,12 +5,35 @@ import gzip
 import glob
 import igraph
 from pprint import pprint
+from shapely.geometry import Point, Polygon, LineString
 
-def compute_page_rank(nodes,links,pagerank_weight,addresses_db):
+def compute_average_jt(services):
+	
+	jt_total = 0
+	for service in services:
+		jt_total = jt_total + service['journey_time']
+
+	average_jt = jt_total / float(len(services))
+
+	return average_jt
+
+def filter_modes(link):
+
+	if "Subway, Metro" in link['modes']:
+		return "Subway, Metro"
+	elif "Tram, Streetcar, Light rail" in link['modes']:
+		return "Tram, Streetcar, Light rail"
+	elif "Ferry" in link['modes']:
+		return "Ferry"
+	else:
+		return "Bus"
+
+
+def compute_page_rank(nodes,links,pagerank_weight,addresses_db,inputted_mode):
 
 	gtfs_graph = igraph.Graph.DictList(vertices=nodes,edges=links, vertex_name_attr="toid",edge_foreign_keys=('negativeNode',"positiveNode"),directed=True)
 
-	print "Computing PageRank"
+	print "Computing PageRank for inputted_mode ", inputted_mode
 
 	pagerank_values = gtfs_graph.pagerank(weights=pagerank_weight,directed=True)
 
@@ -34,89 +57,95 @@ def compute_page_rank(nodes,links,pagerank_weight,addresses_db):
 	print "Sorting PageRank results"
 	pagerank_output = sorted(output, key=lambda x:x['PageRank_%'],reverse=True)
 
-	with gzip.open("../out/pagerank_stats/pagerank_all.json.gz",'w') as outfile:
-		json.dump(pagerank_output,outfile,indent=2)
+	print "Creating a new graph with vertex pagerank vertex attributes"
+	selected_toids = []
+	pagerank_data_db = {}
+	for i in range(0,len(pagerank_output)):
+		pagerank_data_db[pagerank_output[i]['toid']] = pagerank_output[i]
+		if i <= 300:
+			selected_toids.append(pagerank_output[i]['toid'])
 
-def compute_page_rank_per_mode(nodes,links,pagerank_weight,addresses_db,mode):
+	for node in nodes:
+		node['pagerank'] = pagerank_data_db[node['toid']]['PageRank_%'] * 3000
 
+	print "Rebuild graph with pagerank as a vertex attribute"
 	gtfs_graph = igraph.Graph.DictList(vertices=nodes,edges=links, vertex_name_attr="toid",edge_foreign_keys=('negativeNode',"positiveNode"),directed=True)
 
-	print gtfs_graph.summary() + " for mode :" + str(mode)
+	coordinates = []
+	lats = []
+	lons = []
+	for vertex in gtfs_graph.vs:
+		if vertex['toid'] in selected_toids:
+			vertex['label'] = addresses_db[vertex['toid']]['text']
+		else:
+			vertex['label'] = ""
+		coords = (vertex['point'][0],vertex['point'][1])
+		lats.append(vertex['point'][0])
+		lons.append(vertex['point'][1])
+		coordinates.append(coords)
 
-	print "Computing PageRank"
+	max_lat = sorted(lats)[-1]
+	min_lat = sorted(lats)[0]
+	
+	max_lon = sorted(lons)[-1]
+	min_lon = sorted(lons)[0]
 
-	pagerank_values = gtfs_graph.pagerank(weights=pagerank_weight,directed=True)
+	plot_y_dimensions = (max_lat - min_lat) * 10000
+	plot_x_dimensions = (max_lon - min_lon) * 10000
 
-	print len(pagerank_values), "pagerank results"
+	shape = (plot_y_dimensions,plot_x_dimensions)
 
-	print "Curating PageRank results"
+	print gtfs_graph.summary()
 
-	vertex_list = []
-	for v in gtfs_graph.vs:
-		vertex_list.append(v)
+	# Let's use the coordinates for the actual graph, spatially correct
+	layout = coordinates
+	# layout = gtfs_graph.layout_lgl()
 
-	output = []
-	for i in range(0,len(pagerank_values)):
-		data = {
-			"toid" : vertex_list[i]['toid'],
-			"name" : addresses_db[vertex_list[i]['toid']]['text'],
-			"PageRank_%" : pagerank_values[i] * 100
-		}
-		output.append(data)
-
-	print "Sorting PageRank results"
-	pagerank_output = sorted(output, key=lambda x:x['PageRank_%'],reverse=True)
-
-	with gzip.open("../out/pagerank_stats/" + mode + "/pagerank.json.gz",'w') as outfile:
-		json.dump(pagerank_output,outfile,indent=2)
-
-def compute_aggregated_page_rank(mode):
-
-	overall_db = {}
-	data = json.load(gzip.open("../out/pagerank_stats/pagerank_"+mode+".json.gz"))
-	print str(len(data)) + " records, per mode " + mode
-	for record in data:
-		if record['toid'] not in overall_db:
-			overall_db[record['toid']] = []
-		overall_db[record['toid']].append(record)
-
-	keys = overall_db.keys()
-	values = overall_db.values()
-
-	output = []
-	for i in range(0,len(keys)):
-		data = {
-			"location" : addresses_db[keys[i]]['text'],
-			"data" : values[i]
+	modes_color_dict = {
+		"Bus": "green",
+		"Subway, Metro" : "red",
+		"Tram, Streetcar, Light rail" : "red",
+		"Ferry" : "light blue"
 		}
 
-		output.append(data)
+	visual_style = {}
+	# vertex size = pagerank value
+	visual_style['vertex_size'] = [pagerank for pagerank in gtfs_graph.vs['pagerank']]
+	visual_style['vertex_color'] = "orange"
+	visual_style['vertex_label_size'] = 20
+	visual_style['layout'] = layout
+	visual_style['vertex_label_angle'] = 1.5708
+	visual_style['margin'] = 0
+	visual_style['bbox'] = shape
+	visual_style['rescale'] = False
+	
+	# add edge color equal to dominant mode
+	visual_style['edge_color'] = [modes_color_dict[mode] for mode in gtfs_graph.es['mode']]
 
-	# Not sure this is possible - are they add'able?
-	for record in output:
+	if inputted_mode == "nope":
 
-		total_page_rank = 0
-		for value in record['data']:
-			total_page_rank = total_page_rank + value['PageRank_%']
-		record.pop("data")
+		file_name = "../out/pagerank_stats/plots/pagerank_graph_visualisation.pdf"
+		print "Writing image ", file_name
+		igraph.plot(gtfs_graph,file_name,**visual_style)
 
-		record['total_page_rank'] = total_page_rank
+		print "Dumping raw files"
+		with gzip.open("../out/pagerank_stats/data/pagerank_all.json.gz",'w') as outfile:
+			json.dump(pagerank_output,outfile,indent=2)
 
-	sorted_output = sorted(output, key=lambda x:x['total_page_rank'],reverse=True)
+	else:
 
-	data = {
-		"mode" : "mode",
-		"data" : sorted_output
-	}
+		file_name = "../out/pagerank_stats/plots/pagerank_graph_visualisation_" + mode + ".pdf"
+		print "Writing image ", file_name
+		# igraph.plot(gtfs_graph,file_name,**visual_style)
 
-	return data
+		print "Dumping raw files"
+		with gzip.open("../out/pagerank_stats/data/pagerank_"+mode+".json.gz",'w') as outfile:
+			json.dump(pagerank_output,outfile,indent=2)
 
 def check_dir(directory):
 
 	if not os.path.exists(directory):
 		os.makedirs(directory)
-
-# below for extracting sub graphs
 
 def extract_nodes(edges,nodes_db):
 	
@@ -158,21 +187,17 @@ def filter_graph_modes(nodes, links, mode, nodes_db):
 		
 	for record in links:
 
-		sample_record = record
+		if len(record['modes']) == 1:
+			if record['modes'][0] == mode:
+				tmp_edges.append(record)
 		
-		match_status, matches = filter_mode(sample_record,mode)
+		else:
+			
+			match_status, matches = filter_mode(record,mode)
 
-		if match_status == True:
+			if match_status == True:
 
-			tmp_edges.append(matches)
-
-		# Just for sierra-charlie
-		# for record in tmp_edges:
-		# 	record['toid'] = record['edge_id']
-		# 	record.pop("edge_id")
-
-		record.pop('services')
-
+				tmp_edges.append(matches)
 	tmp_nodes = extract_nodes(tmp_edges, nodes_db)
 
 	print len(tmp_edges), " edges loaded"
@@ -188,82 +213,55 @@ def filter_graph_modes(nodes, links, mode, nodes_db):
 
 	return tmp_nodes, tmp_edges
 
-links = []
-for file in glob.glob("../out/graph/*edges*"):
+macro_links = []
+for file in glob.glob("../out/graph/*edges*.json.gz"):
 	print "Loading ", file
 	data = json.load(gzip.open(file))
+	
 	for link in data:
+		
 		link['no_services'] = len(link['services'])
-		# link.pop("services")
-		links.append(link)
+		link['mode'] = filter_modes(link)
 
-print len(links), " links loaded"
+		# Get rid of all the service details as we won't use them for Pagerank compute
+		link.pop("services")
+		
+		macro_links.append(link)
+
+print len(macro_links), " links loaded"
 
 # Load addresses
 addresses = json.load(gzip.open("../out/graph/addresses_1.json.gz"))
 print len(addresses), " addresses loaded"
-nodes = json.load(gzip.open("../out/graph/nodes_1.json.gz"))
-print len(nodes), " nodes loaded"
+tmp_nodes = json.load(gzip.open("../out/graph/nodes_1.json.gz"))
+print len(tmp_nodes), " tmp nodes loaded"
+
+# Somewhat arbitrary 
+london_bounds = Polygon([[-0.7635498046875,51.09662294502995],[0.54931640625,51.09662294502995],[0.54931640625,51.839171715043946],[-0.7635498046875,51.839171715043946],[-0.7635498046875,51.09662294502995]])
 
 nodes_db = {}
-for node in nodes:
-	nodes_db[node['toid']] = node
+macro_nodes = []
+for node in tmp_nodes:
+	node_coords = Point(node['point'][1],node['point'][0])
+	if node_coords.within(london_bounds):
+		nodes_db[node['toid']] = node
+		macro_nodes.append(node)
+
+print len(macro_nodes), " nodes loaded for London area"
 
 addresses_db = {}
 for add in addresses:
 	addresses_db[add['toid']] = add
 
-# compute_page_rank(nodes, links,"no_services",addresses_db)
+compute_page_rank(macro_nodes, macro_links,"journey_time",addresses_db,"nope")
 
-all_modes_list = [u'Subway, Metro', u'Bus', u'Tram, Streetcar, Light rail', u'Ferry']
+# all_modes_list = ['Bus', 'Subway, Metro', 'Tram, Streetcar, Light rail', 'Ferry']
 
-# ~10mins run time
-for mode in all_modes_list:
+# for inputted_mode in all_modes_list:
 
-	print "Computing for mode", mode
-	
-	try:
-		
-		print "Found existing results, loading from file"
+# 	print "Computing for mode", inputted_mode
 
-		pagerank_data = json.load(gzip.open("../out/pagerank_stats/"+mode+"/pagerank.json.gz"))
-		pagerank_data_db = {}
-		for record in pagerank_data:
-			pagerank_data_db[record['toid']] = record
+# 	tmp_nodes, tmp_links = filter_graph_modes(macro_nodes,macro_links,inputted_mode,nodes_db)
 
-		tmp_nodes, tmp_links = filter_graph_modes(nodes,links,mode,nodes_db)
-		for tmp_node in tmp_nodes:
-			tmp_node['pagerank'] = pagerank_data_db[tmp_node['toid']]['PageRank_%']
+# 	compute_page_rank(tmp_nodes,tmp_links,"journey_time",addresses_db,inputted_mode)
 
-		local_graph = igraph.Graph.DictList(vertices=tmp_nodes,edges=tmp_links, vertex_name_attr="toid",edge_foreign_keys=('negativeNode',"positiveNode"),directed=True)
-
-		coordinates = []
-		for vertex in local_graph.vs:
-			vertex['label'] = addresses_db[vertex['toid']]['text']
-			coords = (vertex['point'][0],vertex['point'][1])
-			coordinates.append(coords)
-		
-		print local_graph.summary()
-
-		# Let's use the coordinates for the actual layour
-		# layout = coordinates
-		layout = local_graph.layout_kamada_kawai()
-
-		file_name = "../out/pagerank_stats/" + mode + "/pagerank_vis.pdf"
-
-		igraph.plot(local_graph,file_name,layout=layout)
-
-	except IOError:
-
-		print "Result not found, computing"
-		check_dir("../out/pagerank_stats/" + mode)
-		
-		compute_page_rank_per_mode(tmp_nodes,tmp_links,"journey_time",addresses_db,mode)
-
-# metrics = []
-# for mode in all_modes_list:
-# 	data = compute_aggregated_page_rank(mode)
-# 	metrics.append(data)
-
-# with gzip.open("../out/pagerank_stats/pagerank_stats_all_modes.json.gz","w") as outfile:
-# 	json.dump(metrics,outfile,indent=2)

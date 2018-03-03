@@ -100,7 +100,8 @@ def gen_nodes(stops_db):
 	address_data = []
 	
 	for key,val in stops_db.iteritems():
-		conv_point = transform(outProj,inProj,val['stop_lon'],val['stop_lat'])
+		conv_point = (val['stop_lat'],val['stop_lon'])
+		# conv_point = transform(outProj,inProj,val['stop_lon'],val['stop_lat'])
 			
 		node_data = {
 			
