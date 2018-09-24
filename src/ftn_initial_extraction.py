@@ -44,9 +44,8 @@ def get_what_ya_need(path):
 	print "Converting GTFS data into usable format"
 
 	for file in glob.glob(path + "*"):
-		file_name = file[35:-4]
 
-		if file_name == "stops":
+		if "stops" in file:
 			print "Creating stops db"
 			stops = pd.read_csv(file)
 			stops_jd = json.loads(stops.to_json(orient='records'))
@@ -54,7 +53,7 @@ def get_what_ya_need(path):
 			for stop in stops_jd:
 				stops_db[stop['stop_id']] = stop
 		
-		elif file_name == "routes":
+		elif "routes" in file:
 			print "Creating routes db"
 			routes = pd.read_csv(file)
 			routes_js = json.loads(routes.to_json(orient='records'))
@@ -62,7 +61,7 @@ def get_what_ya_need(path):
 			for route in routes_js:
 				routes_db[route['route_id']] = route
 
-		elif file_name == "trips":
+		elif "trips" in file:
 			print "Creating trips db"
 			trips = pd.read_csv(file)
 			trips_js = json.loads(trips.to_json(orient='records'))
@@ -70,7 +69,7 @@ def get_what_ya_need(path):
 			for trip in trips_js:
 				trips_db[trip['trip_id']] = trip
 		
-		elif file_name == "calendar":
+		elif "calendar" in file:
 			print "Creating calendar db"
 			calendar = pd.read_csv(file)
 			calendar_js = json.loads(calendar.to_json(orient='records'))
@@ -78,7 +77,7 @@ def get_what_ya_need(path):
 			for cal in calendar_js:
 				calendar_db[cal['service_id']] = cal
 
-		elif file_name == "stop_times":
+		elif "stop_times" in file:
 			print "Creating stop_times db"
 			stop_times_df = pd.read_csv(file)
 			stop_times = json.loads(stop_times_df.to_json(orient='records'))

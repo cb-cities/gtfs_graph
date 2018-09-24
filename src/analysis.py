@@ -17,11 +17,10 @@ if __name__ == '__main__':
 
 	input_file = args['input']
 
-	# Initial extraction into graph'esque data
-	extracted_folder = ftn_initial_extraction.check_if_gtfs_already_extracted(input_file)
+	print("Loading from folder {} ").format(input_file)
 
 	# A series of dicts with GTFS data in a useful format
-	trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times = ftn_initial_extraction.get_what_ya_need(extracted_folder)
+	trips_db, stops_db, routes_db, calendar_db, stop_times_db, stop_times = ftn_initial_extraction.get_what_ya_need(input_file)
 
 	# # Check the GTFS data itself
 	ftn_initial_extraction.assess_gtfs_coverage(stop_times_db,trips_db,routes_db)
