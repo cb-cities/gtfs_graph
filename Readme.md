@@ -2,7 +2,7 @@
 
 ### Input
 
-This Python script takes a [GTFS](https://developers.google.com/transit/gtfs/) file in a `.tar.gz` format (to reduce size). These may be generated from the [tfl_gtfs repository](https://github.com/cb-cities/tfl_gtfs).
+This Python script takes a [GTFS](https://developers.google.com/transit/gtfs/) uncompressed folder. These may be generated from the [tfl_gtfs repository](https://github.com/cb-cities/tfl_gtfs).
 
 ### Executing the script
 
@@ -12,12 +12,12 @@ Change to the `src` directory:
 
 Execture the Python script and pass the location of your input file. In this case, it is found within a `tmp` directory.
 
-`python analysis.py -i ../tmp/tfl_gtfs_2017-02-07_05.tar.gz`
+`python analysis.py -i ../tmp/tfl_gtfs_2017-02-07_05/`
 
 Example output:
 
 ```
-python analysis.py -i ../tmp/tfl_gtfs_2017-02-07_05.tar.gz
+python analysis.py -i ../tmp/tfl_gtfs_2017-02-07_05/
 Converting GTFS data into usable format
 Creating stop_times db
 15204494  stop times loaded
