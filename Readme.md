@@ -1,4 +1,4 @@
-### GTFS to a frequency based graph conversion
+### GTFS to a weighted directed acyclic graph
 
 ### Input
 
