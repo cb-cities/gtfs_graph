@@ -16,8 +16,7 @@ if __name__ == '__main__':
 							'--weights',
 							help='If True, weights (actual services) are added as a list',
 							required=False,
-							default=False.
-							)
+							default=False)
 
 
 	args = vars(arg_parser.parse_args())
