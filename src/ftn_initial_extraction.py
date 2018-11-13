@@ -260,73 +260,80 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			# Find end of week
 			end_of_week = start_of_week + timedelta(days=6)
 
-			service_days_info = calendar_db[service_id]
+			try:
 
-			time_tabled_services = []
-			
-			# Iterate over the week
-			for i in range(0,7):
+				service_days_info = calendar_db[service_id]
+
+				time_tabled_services = []
 				
-				day = start_of_week + timedelta(days=i)
-				day_of_week = calendar.day_name[day.weekday()]
+				# Iterate over the week
+				for i in range(0,7):
+					
+					day = start_of_week + timedelta(days=i)
+					day_of_week = calendar.day_name[day.weekday()]
+					
+					if service_days_info[day_of_week.lower()] == 1 or service_days_info[day_of_week.lower()] == 1.0 :
+						
+						# Append date to this time to create a datetime object
+						try:
+							departure_time_dt = datetime.strptime(current_stop['departure_time'],"%H:%M:%S").time()
+							dep_day = day
+						
+						except Exception as e:
+							# If the service runs across midnight, you get incorrect time stamps like 24:01:00
+							# Here, we add a day and manually fix the timestamp
+							new_time = timetable_day_over_run_ftn(current_stop)
+							departure_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
+							# Add the day
+							dep_day = day + timedelta(1)
+
+						try:
+							arrival_time_dt = datetime.strptime(next_stop['arrival_time'],"%H:%M:%S").time()
+							arr_day = day
+						
+						except Exception as e:
+
+							# If the service runs across midnight, you get incorrect time stamps like 24:01:00
+							# Here, we add a day and manually fix the timestamp
+							new_time = timetable_day_over_run_ftn(next_stop)
+							arrival_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
+							# Add the day
+							arr_day = day + timedelta(1)
+						
+						# Convert and format time stamps as epoch to get rid of this str/datetime object nonsense
+						dep_gen_stamp = int((datetime.combine(dep_day,departure_time_dt)).strftime('%s'))
+						arr_gen_stamp = int((datetime.combine(arr_day,arrival_time_dt)).strftime('%s'))
+						journey_time = arr_gen_stamp - dep_gen_stamp
+
+						if journey_time < 0:
+
+							print "day", day
+							
+							print "negative Node"
+							pprint(current_stop)
+							print "positive Node"
+							pprint(next_stop)
+
+							print "journey time ", journey_time
+							sys.exit(1)
+
+						# Create a dict of ze results
+
+						data = {
+							
+							"departure_time" : dep_gen_stamp,
+							"arrival_time" : arr_gen_stamp,
+							'journey_time' : journey_time
+							
+							}
+
+						time_tabled_services.append(data)
+			except KeyError:
 				
-				if service_days_info[day_of_week.lower()] == 1 or service_days_info[day_of_week.lower()] == 1.0 :
-					
-					# Append date to this time to create a datetime object
-					try:
-						departure_time_dt = datetime.strptime(current_stop['departure_time'],"%H:%M:%S").time()
-						dep_day = day
-					
-					except Exception as e:
-						# If the service runs across midnight, you get incorrect time stamps like 24:01:00
-						# Here, we add a day and manually fix the timestamp
-						new_time = timetable_day_over_run_ftn(current_stop)
-						departure_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
-						# Add the day
-						dep_day = day + timedelta(1)
+				print("Service id {} missing from calendar").format(service_id)
+				
+				break
 
-					try:
-						arrival_time_dt = datetime.strptime(next_stop['arrival_time'],"%H:%M:%S").time()
-						arr_day = day
-					
-					except Exception as e:
-
-						# If the service runs across midnight, you get incorrect time stamps like 24:01:00
-						# Here, we add a day and manually fix the timestamp
-						new_time = timetable_day_over_run_ftn(next_stop)
-						arrival_time_dt = datetime.strptime(new_time,"%H:%M:%S").time()
-						# Add the day
-						arr_day = day + timedelta(1)
-					
-					# Convert and format time stamps as epoch to get rid of this str/datetime object nonsense
-					dep_gen_stamp = int((datetime.combine(dep_day,departure_time_dt)).strftime('%s'))
-					arr_gen_stamp = int((datetime.combine(arr_day,arrival_time_dt)).strftime('%s'))
-					journey_time = arr_gen_stamp - dep_gen_stamp
-
-					if journey_time < 0:
-
-						print "day", day
-						
-						print "negative Node"
-						pprint(current_stop)
-						print "positive Node"
-						pprint(next_stop)
-
-						print "journey time ", journey_time
-						sys.exit(1)
-
-					# Create a dict of ze results
-
-					data = {
-						
-						"departure_time" : dep_gen_stamp,
-						"arrival_time" : arr_gen_stamp,
-						'journey_time' : journey_time
-						
-						}
-
-					time_tabled_services.append(data)
-			
 			data = {
 				'negativeNode' : neg_node,
 				"positiveNode" : pos_node,
