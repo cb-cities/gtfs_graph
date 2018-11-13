@@ -208,6 +208,8 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 	current_trip = []
 	previous_step_sequence = 1
 
+	errors = 0
+
 	print len(stop_times), " stop_times loaded"
 
 	for i in range(0,len(stop_times)-1):
@@ -342,6 +344,8 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			except KeyError:
 				
 				print("Service id {} missing from calendar").format(service_id)
+
+				errors = errors + 1
 			
 		else:
 
@@ -355,6 +359,10 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			
 			# Reset list
 			current_trip = []
+
+	error_ratio = errors / float(len(stop_times)) * 100
+	
+	print error_ratio
 
 	return all_unique_trips
 
