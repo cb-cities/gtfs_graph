@@ -192,7 +192,11 @@ def route_type_dict(route_data):
 			}
 		}
 
-	queried_type = type_dict[route_data]['route_type_desc']
+	try:
+		queried_type = type_dict[route_data]['route_type_desc']
+	
+	except KeyError:
+		queried_type = "unknown_mode"
 
 	return queried_type
 
