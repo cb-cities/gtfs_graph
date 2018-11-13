@@ -328,8 +328,7 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 							}
 
 						time_tabled_services.append(data)
-				data = 
-					{
+				data = {
 					'negativeNode' : neg_node,
 					"positiveNode" : pos_node,
 					"trip_id" : trip_id_1,
