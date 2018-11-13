@@ -6,7 +6,7 @@ import ftn_generate_weighted_graph
 
 if __name__ == '__main__':
 
-	arg_parser = argparse.ArgumentParser(description='Analyse *Mo GPS data')
+	arg_parser = argparse.ArgumentParser(description='Convert GTFS to a DAG')
 
 	arg_parser.add_argument('-i',
 							'--input',
