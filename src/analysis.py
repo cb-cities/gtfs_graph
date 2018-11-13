@@ -12,10 +12,21 @@ if __name__ == '__main__':
 							'--input',
 							help='The input file location',
 							required=True)
+	arg_parser.add_argument('-w',
+							'--weights',
+							help='If True, weights (actual services) are added as a list',
+							required=False,
+							default=False.
+							)
+
 
 	args = vars(arg_parser.parse_args())
 
 	input_file = args['input']
+	keep_services = args['weights']
+
+	if keep_services == False:
+		print("Services not appended to edges. Computing average edge weight")
 
 	print("Loading from folder {} ").format(input_file)
 
@@ -32,7 +43,7 @@ if __name__ == '__main__':
 	unique_gtfs_edges = ftn_initial_extraction.generate_unique_edges(all_gtfs_edges)
 
 	# # Create a weighted graph, based upon average journey times on an edge
-	edges = ftn_generate_weighted_graph.gen_edges(unique_gtfs_edges,stops_db)
+	edges = ftn_generate_weighted_graph.gen_edges(unique_gtfs_edges,stops_db,keep_services)
 	
 	# Create the nodes and addresses file
 	nodes, addresses = ftn_generate_weighted_graph.gen_nodes(stops_db)

@@ -33,7 +33,7 @@ def polyline_generator(negativeNode,positiveNode,stops_db):
 
 	return polyline
 
-def gen_edges(unique_edges,stops_db):
+def gen_edges(unique_edges,stops_db,keep_services):
 
 	print len(unique_edges), " edges found"
 	
@@ -76,19 +76,36 @@ def gen_edges(unique_edges,stops_db):
 
 		# Order services by departure_time
 		ordered_weight_data = sorted(weight_data, key=lambda k: k['departure_time'])
+
+		if keep_services == True:
 			
-		output = {
-			# "toid" : edge_id,
-			"edge_id" : edge_id,
-			"graph" : "GTFS",
-			"index" : 0,
-			"negativeNode" : negativeNode,
-			"positiveNode" : positiveNode,
-			"polyline" : polyline_generator(negativeNode,positiveNode,stops_db),
-			"services" : ordered_weight_data,
-			"journey_time" : average_jt,
-			'modes' : list(modes)
-		}
+			output = {
+				# "toid" : edge_id,
+				"edge_id" : edge_id,
+				"graph" : "GTFS",
+				"index" : 0,
+				"negativeNode" : negativeNode,
+				"positiveNode" : positiveNode,
+				"polyline" : polyline_generator(negativeNode,positiveNode,stops_db),
+				"services" : ordered_weight_data,
+				"journey_time" : average_jt,
+				'modes' : list(modes)
+			}
+
+		else:
+
+			output = {
+				# "toid" : edge_id,
+				"edge_id" : edge_id,
+				"graph" : "GTFS",
+				"index" : 0,
+				"negativeNode" : negativeNode,
+				"positiveNode" : positiveNode,
+				"polyline" : polyline_generator(negativeNode,positiveNode,stops_db),
+				"journey_time" : average_jt,
+				'modes' : list(modes)
+			}
+
 		
 		gen_edges.append(output)
 

@@ -250,17 +250,17 @@ def create_edges_with_timetable_info(trips_db, stops_db, routes_db, calendar_db,
 			# Get service_id from trips_db
 			service_id = trips_db[trip_id_1]['service_id']
 			
-			# Get calendar info from service_id
-			date_info = datetime.strptime(str(calendar_db[service_id]['start_date']),'%Y%m%d')
-
-			# Let's find first Monday from the timetable
-			time_delta = 7 - int(date_info.weekday())
-			start_of_week = date_info + timedelta(days=time_delta)
-			
-			# Find end of week
-			end_of_week = start_of_week + timedelta(days=6)
-
 			try:
+
+				# Get calendar info from service_id
+				date_info = datetime.strptime(str(calendar_db[service_id]['start_date']),'%Y%m%d')
+
+				# Let's find first Monday from the timetable
+				time_delta = 7 - int(date_info.weekday())
+				start_of_week = date_info + timedelta(days=time_delta)
+				
+				# Find end of week
+				end_of_week = start_of_week + timedelta(days=6)			
 
 				service_days_info = calendar_db[service_id]
 
